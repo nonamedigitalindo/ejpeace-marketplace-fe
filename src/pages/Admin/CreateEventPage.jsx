@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FaSpinner, FaMapMarkerAlt, FaFileImage, FaTrash, FaPlus, FaTimes, FaImages } from "react-icons/fa";
+import { FaSpinner, FaMapMarkerAlt, FaFileImage, FaTrash, FaPlus, FaTimes, FaImages, FaEdit } from "react-icons/fa";
 
 import resolveImageSrc from "../../utils/image";
 import {
@@ -420,7 +420,7 @@ export default function AdminEvents() {
       {/* Custom Alert */}
       {alert.show && (
         <div className={`mb-6 p-4 rounded-xl flex items-center justify-between shadow-lg animate-slide-down ${alert.type === 'success' ? 'bg-green-100 border-l-4 border-green-500 text-green-700' :
-            'bg-red-100 border-l-4 border-red-500 text-red-700'
+          'bg-red-100 border-l-4 border-red-500 text-red-700'
           }`}>
           <div className="flex items-center">
             {alert.type === 'success' ? (
@@ -714,8 +714,8 @@ export default function AdminEvents() {
               onClick={handleAdd}
               disabled={submitting}
               className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 ${submitting
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed transform-none'
-                  : 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black'
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed transform-none'
+                : 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black'
                 }`}
             >
               {submitting ? 'Creating Event...' : 'Create Event'}
@@ -873,8 +873,8 @@ export default function AdminEvents() {
               onClick={handleUpdate}
               disabled={submitting}
               className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 ${submitting
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed transform-none'
-                  : 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black'
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed transform-none'
+                : 'bg-gradient-to-r from-yellow-400 to-amber-500 text-black'
                 }`}
             >
               {submitting ? 'Updating Event...' : 'Update Changes'}

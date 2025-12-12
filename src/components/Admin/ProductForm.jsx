@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import ReactQuill from "react-quill";
-import "react-quill/dist/quill.snow.css";
+import { Editor, EditorProvider } from "react-simple-wysiwyg";
 import Select from "react-select";
 import { FaCloudUploadAlt, FaSave, FaTimes, FaEdit, FaArrowLeft, FaExchangeAlt, FaTrash } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
@@ -260,7 +259,13 @@ export default function ProductForm({ initialData = {}, isEdit = false, onSubmit
                             <div className="space-y-2">
                                 <label className="block text-sm font-bold text-gray-700">Description</label>
                                 <div className="bg-gray-50 rounded-xl overflow-hidden border border-gray-200 focus-within:ring-4 focus-within:ring-yellow-100 focus-within:border-yellow-400">
-                                    <ReactQuill theme="snow" value={formData.description} onChange={(val) => setFormData(prev => ({ ...prev, description: val }))} className="bg-white" />
+                                    <EditorProvider>
+                                        <Editor
+                                            value={formData.description}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                                            containerProps={{ style: { minHeight: '200px', backgroundColor: 'white' } }}
+                                        />
+                                    </EditorProvider>
                                 </div>
                             </div>
 
