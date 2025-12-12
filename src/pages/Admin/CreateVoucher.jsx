@@ -1,5 +1,5 @@
-// Updated CRUDVoucher.jsx — versi rapi, aman, dan bebas error
 import { useEffect, useState } from "react";
+import { FaTicketAlt, FaEdit, FaTrash, FaPlus, FaPercentage, FaMoneyBillWave, FaCalendarAlt, FaTimes } from "react-icons/fa";
 import {
   getAllVouchers,
   addVoucher,
@@ -25,22 +25,6 @@ function toMySQLDateTime(date) {
     pad(d.getMinutes()) +
     ":" +
     pad(d.getSeconds())
-  );
-}
-
-// Komponen Input reusable
-function Input({ label, name, value, onChange, type = "text" }) {
-  return (
-    <div className="flex flex-col">
-      <label className="font-medium mb-1">{label}</label>
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        className="border p-2 rounded-lg"
-      />
-    </div>
   );
 }
 
@@ -215,157 +199,230 @@ export default function CRUDVoucher() {
   };
 
   return (
-    <div className="p-4 md:p-6">
-      <h1 className="text-3xl font-bold mb-6">Voucher Management</h1>
+    <div className="w-full min-h-screen font-sans pb-10">
 
-      <div className="flex justify-end mb-4">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Voucher Management</h1>
+          <p className="text-gray-500 mt-1">Manage discounts and promotional codes.</p>
+        </div>
         <button
           onClick={openAdd}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="bg-gradient-to-r from-yellow-400 to-amber-500 text-black px-6 py-3 rounded-xl font-bold hover:shadow-lg hover:scale-105 transition-all flex items-center gap-2"
         >
-          Tambah Voucher
+          <FaPlus /> Add Voucher
         </button>
       </div>
 
-      <div className="overflow-x-auto shadow rounded-lg">
-        <table className="w-full border-collapse">
-          <thead className="bg-gray-800 text-white">
-            <tr>
-              <th className="p-3">Kode</th>
-              <th className="p-3">Jenis Diskon</th>
-              <th className="p-3">Nilai</th>
-              <th className="p-3">Max Usage</th>
-              <th className="p-3">Digunakan</th>
-              <th className="p-3">Min Order</th>
-              <th className="p-3">Valid Dari</th>
-              <th className="p-3">Valid Sampai</th>
-              <th className="p-3">Status</th>
-              <th className="p-3">Aksi</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {loading ? (
-              <tr><td colSpan="10" className="text-center p-5">Loading...</td></tr>
-            ) : vouchers.length === 0 ? (
-              <tr><td colSpan="10" className="text-center p-5">Tidak ada data</td></tr>
-            ) : (
-              vouchers.map((v) => (
-                <tr key={v.id} className="border-b text-sm">
-                  <td className="p-3 font-semibold">{v.code}</td>
-                  <td className="p-3 capitalize">{v.discount_type}</td>
-                  <td className="p-3">Rp {Number(v.discount_value).toLocaleString()}</td>
-                  <td className="p-3">{v.max_usage}</td>
-                  <td className="p-3">{v.used_count}</td>
-                  <td className="p-3">Rp {Number(v.min_order_value).toLocaleString()}</td>
-                  <td className="p-3">{new Date(v.valid_from).toLocaleString("id-ID")}</td>
-                  <td className="p-3">{new Date(v.valid_until).toLocaleString("id-ID")}</td>
-                  <td className="p-3">
-                    {v.is_active === 1 ? (
-                      <span className="text-green-600 font-bold">Aktif</span>
-                    ) : (
-                      <span className="text-red-600 font-bold">Nonaktif</span>
-                    )}
-                  </td>
-                  <td className="p-3 flex gap-2">
-                    <button
-                      onClick={() => openEdit(v)}
-                      className="px-3 py-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(v.id)}
-                      className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600"
-                    >
-                      Hapus
-                    </button>
-                  </td>
+      {/* Voucher Table with Floating Rows */}
+      <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-yellow-50 text-gray-600 border-b border-gray-100">
+                  <th className="p-5 font-bold uppercase text-xs tracking-wider rounded-tl-3xl">Voucher Code</th>
+                  <th className="p-5 font-bold uppercase text-xs tracking-wider">Discount</th>
+                  <th className="p-5 font-bold uppercase text-xs tracking-wider">Usage</th>
+                  <th className="p-5 font-bold uppercase text-xs tracking-wider">Validity Period</th>
+                  <th className="p-5 font-bold uppercase text-xs tracking-wider">Status</th>
+                  <th className="p-5 font-bold uppercase text-xs tracking-wider text-right rounded-tr-3xl">Actions</th>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {vouchers.length === 0 ? (
+                  <tr><td colSpan="6" className="text-center p-10 text-gray-500">No vouchers found.</td></tr>
+                ) : (
+                  vouchers.map((v) => (
+                    <tr key={v.id} className="hover:bg-yellow-50/30 transition-colors group">
+                      <td className="p-5">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-100 to-amber-100 flex items-center justify-center text-yellow-600 shadow-inner">
+                            <FaTicketAlt />
+                          </div>
+                          <div>
+                            <p className="font-bold text-gray-900 font-mono tracking-wider">{v.code}</p>
+                            <p className="text-xs text-gray-400 uppercase">{v.voucher_type}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-5">
+                        <div className="flex items-center gap-2 font-bold text-gray-800">
+                          {v.discount_type === 'percent' ? <FaPercentage className="text-gray-400 text-xs" /> : <FaMoneyBillWave className="text-gray-400 text-xs" />}
+                          {v.discount_type === 'percent' ? `${v.discount_value}%` : `Rp ${Number(v.discount_value).toLocaleString()}`}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Min. Order: Rp {Number(v.min_order_value).toLocaleString()}</p>
+                      </td>
+                      <td className="p-5">
+                        <div className="flex flex-col gap-1 w-full max-w-[120px]">
+                          <div className="flex justify-between text-xs font-bold text-gray-600">
+                            <span>{v.used_count} used</span>
+                            <span className="text-gray-400">/ {v.max_usage || '∞'}</span>
+                          </div>
+                          {/* Simple Progress Bar */}
+                          <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${v.used_count >= v.max_usage ? 'bg-red-500' : 'bg-yellow-500'}`}
+                              style={{ width: `${Math.min(100, (v.used_count / (v.max_usage || 1)) * 100)}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-5">
+                        <div className="text-sm text-gray-600">
+                          <div className="flex items-center gap-2 mb-1">
+                            <FaCalendarAlt className="text-gray-300 text-xs" />
+                            <span className="font-medium text-xs">Start:</span>
+                            {new Date(v.valid_from).toLocaleDateString('id-ID')}
+                          </div>
+                          <div className="flex items-center gap-2 text-gray-400 text-xs">
+                            <FaCalendarAlt className="text-gray-200 text-xs" />
+                            <span>Until:</span>
+                            {new Date(v.valid_until).toLocaleDateString('id-ID')}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-5">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${v.is_active === 1
+                            ? 'bg-green-100 text-green-700 border-green-200'
+                            : 'bg-red-50 text-red-600 border-red-100'
+                          }`}>
+                          {v.is_active === 1 ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="p-5 text-right">
+                        <div className="flex justify-end gap-2 opacity-100 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => openEdit(v)}
+                            className="p-2 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors"
+                            title="Edit Voucher"
+                          >
+                            <FaEdit />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(v.id)}
+                            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
+                            title="Delete Voucher"
+                          >
+                            <FaTrash />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {openModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex justify-center items-center p-4 z-50">
-          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-xl p-6">
-            <h2 className="text-2xl font-semibold text-center mb-6">
-              {isEdit ? "Edit Voucher" : "Tambah Voucher"}
-            </h2>
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-slide-up">
+            <div className="bg-gradient-to-r from-yellow-400 to-amber-500 p-6 flex justify-between items-center">
+              <h2 className="text-xl font-bold text-black">
+                {isEdit ? "Edit Voucher" : "Create New Voucher"}
+              </h2>
+              <button onClick={() => setOpenModal(false)} className="bg-white/20 hover:bg-white/40 rounded-full w-8 h-8 flex items-center justify-center text-black font-bold transition-colors">
+                <FaTimes />
+              </button>
+            </div>
 
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <Input label="Kode Voucher" name="code" value={form.code} onChange={handleChange} />
+            <form onSubmit={handleSubmit} className="p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Input label="Voucher Code" name="code" value={form.code} onChange={handleChange} placeholder="e.g. SUMMER2024" required />
 
-              <div className="flex flex-col">
-                <label className="font-medium mb-1">Jenis Diskon</label>
-                {/* Auto-filled as Fixed for new vouchers; disable editing when creating */}
-                <select
-                  name="discount_type"
-                  value={form.discount_type}
-                  onChange={handleChange}
-                  className="border p-2 rounded-lg"
-                  disabled={!isEdit}
-                >
-                  {/* keep options for edit mode so existing vouchers can be adjusted */}
-                  <option value="percent">Percent</option>
-                  <option value="fixed">Fixed</option>
-                </select>
+                <div className="flex flex-col">
+                  <label className="font-bold text-gray-700 mb-2 text-sm">Discount Type</label>
+                  <select
+                    name="discount_type"
+                    value={form.discount_type}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all outline-none"
+                    disabled={!isEdit} // as per original logic, though usually editable
+                  >
+                    <option value="percent">Percent (%)</option>
+                    <option value="fixed">Fixed Amount (Rp)</option>
+                  </select>
+                </div>
+
+                <Input label="Discount Value" name="discount_value" value={form.discount_value} onChange={handleChange} type="number" required />
+                <Input label="Minimum Order (Rp)" name="min_order_value" value={form.min_order_value} onChange={handleChange} type="number" />
+
+                <Input label="Max Usage Limit" name="max_usage" value={form.max_usage} onChange={handleChange} type="number" />
+
+                <div className="flex flex-col">
+                  <label className="font-bold text-gray-700 mb-2 text-sm">Status</label>
+                  <select
+                    name="is_active"
+                    value={form.is_active}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all outline-none"
+                  >
+                    <option value={1}>Active</option>
+                    <option value={0}>Inactive</option>
+                  </select>
+                </div>
+
+                <Input label="Valid From" type="datetime-local" name="valid_from" value={form.valid_from} onChange={handleChange} required />
+                <Input label="Valid Until" type="datetime-local" name="valid_until" value={form.valid_until} onChange={handleChange} required />
+
+                <div className="flex flex-col md:col-span-2">
+                  <label className="font-bold text-gray-700 mb-2 text-sm">Voucher Type (Product/Event)</label>
+                  <input
+                    type="text"
+                    name="voucher_type"
+                    value={form.voucher_type}
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all outline-none"
+                    disabled={!isEdit} // original logic disabled this for some reason
+                  />
+                </div>
               </div>
 
-              <Input label="Nilai Diskon" name="discount_value" value={form.discount_value} onChange={handleChange} />
-              <Input label="Max Usage" name="max_usage" value={form.max_usage} onChange={handleChange} />
-              <Input label="Min Order" name="min_order_value" value={form.min_order_value} onChange={handleChange} />
-
-              <Input label="Valid Dari" type="datetime-local" name="valid_from" value={form.valid_from} onChange={handleChange} />
-              <Input label="Valid Sampai" type="datetime-local" name="valid_until" value={form.valid_until} onChange={handleChange} />
-
-              <div className="flex flex-col">
-                <label className="font-medium mb-1">Status</label>
-                <select
-                  name="is_active"
-                  value={form.is_active}
-                  onChange={handleChange}
-                  className="border p-2 rounded-lg"
-                >
-                  <option value={1}>Aktif</option>
-                  <option value={0}>Nonaktif</option>
-                </select>
-              </div>
-
-              <div className="flex flex-col">
-                <label className="font-medium mb-1">Voucher Type</label>
-                <input
-                  type="text"
-                  name="voucher_type"
-                  value={form.voucher_type}
-                  onChange={handleChange}
-                  className="border p-2 rounded-lg"
-                  disabled={!isEdit}
-                />
-              </div>
-
-              <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => setOpenModal(false)}
-                  className="px-4 py-2 bg-gray-400 text-white rounded-lg hover:bg-gray-500"
+                  className="px-6 py-3 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  className="px-6 py-3 rounded-xl font-bold text-black bg-gradient-to-r from-yellow-400 to-amber-500 hover:shadow-lg hover:scale-[1.02] transition-all"
                 >
-                  {isEdit ? "Update" : "Simpan"}
+                  {isEdit ? "Save Changes" : "Create Voucher"}
                 </button>
               </div>
             </form>
-
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Reusable Input Component
+function Input({ label, name, value, onChange, type = "text", placeholder, required }) {
+  return (
+    <div className="flex flex-col">
+      <label className="font-bold text-gray-700 mb-2 text-sm">{label} {required && <span className="text-red-500">*</span>}</label>
+      <input
+        type={type}
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        required={required}
+        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all outline-none"
+      />
     </div>
   );
 }
