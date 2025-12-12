@@ -1,0 +1,523 @@
+import { useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import {
+  createPurchase,
+  createPurchaseDirect,
+  initiatePayment,
+} from "../../../api/purchase";
+import { createTicket, initiateTicketPayment } from "../../../api/ticket";
+import { getAllVouchers, claimVoucher } from "../../../api/voucher";
+import { IMAGE_BASE_URL } from "../../../api/apiClient";
+import { useNavigate } from "react-router-dom";
+import OrderSummary from "../../../components/Payment/OrderSummary";
+import ProductList from "../../../components/Payment/ProductList";
+import VoucherSection from "../../../components/Payment/VoucherSection";
+import VoucherModal from "../../../components/Payment/VoucherModal";
+
+export default function PaymentPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [vouchers, setVouchers] = useState([]);
+  const [showVoucherModal, setShowVoucherModal] = useState(false);
+  const [selectedVoucher, setSelectedVoucher] = useState(null);
+  const [voucherCode, setVoucherCode] = useState("");
+  const [voucherError, setVoucherError] = useState("");
+  const [voucherSuccess, setVoucherSuccess] = useState("");
+
+  // Fetch vouchers when component mounts
+  useEffect(() => {
+    const fetchVouchers = async () => {
+      try {
+        const response = await getAllVouchers();
+        const vouchersData = response.data || response || [];
+        // Filter for product vouchers only
+        const productVouchers = vouchersData.filter(
+          (voucher) => voucher.type === "product" || !voucher.type
+        );
+        setVouchers(productVouchers);
+      } catch (err) {
+        console.error("Error fetching vouchers:", err);
+      }
+    };
+
+    fetchVouchers();
+  }, []);
+
+  // Handle case where there's no state
+  if (!location.state) return <p className="p-6">Tidak ada data checkout.</p>;
+
+  const { form, cartItems = [], isTicket = false, buyNowItem } = location.state;
+
+  // Ensure we have items to process - either from cart or buyNowItem
+  const items = buyNowItem
+    ? [buyNowItem]
+    : Array.isArray(cartItems)
+    ? cartItems
+    : [];
+
+  // Check if there are items to process
+  const hasItems = items && items.length > 0;
+
+  if (!hasItems && !isTicket) {
+    return (
+      <div className="pt-32 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">No items to process</h1>
+          <p className="mb-6">
+            Please add items to your cart or select a product to buy.
+          </p>
+          <button
+            onClick={() => window.history.back()}
+            className="bg-black text-white px-4 py-2 rounded hover:bg-gray-800"
+          >
+            Go Back
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate original total
+  const originalTotal = items.reduce(
+    (sum, item) => sum + Number(item.price || 0) * Number(item.qty || 1),
+    0
+  );
+
+  // Calculate discount amount based on selected voucher
+  const calculateDiscount = () => {
+    if (!selectedVoucher || !originalTotal) return 0;
+
+    const minOrderValue = parseFloat(selectedVoucher.min_order_value) || 0;
+    if (originalTotal < minOrderValue) return 0;
+
+    if (selectedVoucher.discount_type === "percentage") {
+      const discountPercent = parseFloat(selectedVoucher.discount_value) || 0;
+      return (originalTotal * discountPercent) / 100;
+    } else if (selectedVoucher.discount_type === "fixed") {
+      const discountAmount = parseFloat(selectedVoucher.discount_value) || 0;
+      return Math.min(discountAmount, originalTotal); // Can't discount more than total
+    }
+
+    return 0;
+  };
+
+  // Calculate final total after discount
+  const discountAmount = calculateDiscount();
+  const finalTotal = originalTotal - discountAmount;
+
+  const handlePayment = async () => {
+    // Prevent double click
+    if (loading) return;
+
+    setLoading(true);
+
+    try {
+      if (isTicket) {
+        // Handle ticket purchase
+        const ticketData = {
+          event_id: form.event_id,
+          attendee_name: form.full_name,
+          attendee_email: form.email,
+          attendee_phone: form.phone,
+        };
+
+        // Create ticket
+        const ticketResponse = await createTicket(ticketData);
+        const ticketId = ticketResponse.data?.id || ticketResponse.id;
+
+        // Apply voucher if selected
+        // Note: applyVoucherToTicket function needs to be implemented
+        if (selectedVoucher) {
+          console.warn("Voucher application for tickets not yet implemented");
+          // try {
+          //   await applyVoucherToTicket({
+          //     ticket_id: ticketId,
+          //     voucher_code: selectedVoucher.code,
+          //   });
+          // } catch (voucherError) {
+          //   console.warn("Failed to apply voucher to ticket:", voucherError);
+          // }
+        }
+
+        // Initiate ticket payment
+        const paymentResponse = await initiateTicketPayment({
+          ticket_id: ticketId,
+        });
+
+        // Check for invoice_url in the response data
+        const invoiceUrl =
+          paymentResponse.data?.invoice_url || paymentResponse.invoice_url;
+
+        if (invoiceUrl) {
+          // Redirect to Xendit payment page
+          window.location.href = invoiceUrl;
+        } else {
+          console.error("No invoice_url found in response:", paymentResponse);
+          alert("Gagal mendapatkan link pembayaran. Silakan coba lagi.");
+        }
+      } else {
+        // Handle product purchase
+        if (buyNowItem) {
+          // Direct purchase for buyNowItem items
+          const directPurchaseData = {
+            purchase_data: {
+              product_id: buyNowItem.id, // ← WAJIB! ALWAYS send this
+              total_amount: finalTotal,
+              description: `Direct purchase of ${buyNowItem.name}`,
+            },
+            shipping_address: {
+              full_name: form.full_name,
+              phone: form.phone,
+              address_line1: form.address_line1,
+              city: form.city,
+              postal_code: form.postal_code,
+            },
+          };
+
+          // Add voucher code if selected
+          if (selectedVoucher) {
+            directPurchaseData.voucher_code = selectedVoucher.code;
+          }
+
+          const purchaseResponse = await createPurchaseDirect(
+            directPurchaseData
+          );
+          const purchaseId = purchaseResponse.data?.id || purchaseResponse.id;
+
+          // Initiate payment
+          const paymentResponse = await initiatePayment(purchaseId);
+
+          // Check for invoice_url in the response data
+          const invoiceUrl =
+            paymentResponse.data?.invoice_url || paymentResponse.invoice_url;
+
+          if (invoiceUrl) {
+            // Redirect to Xendit payment page
+            window.location.href = invoiceUrl;
+          } else {
+            console.error("No invoice_url found in response:", paymentResponse);
+            alert("Gagal mendapatkan link pembayaran. Silakan coba lagi.");
+          }
+        } else {
+          // Regular cart purchase
+          const purchasePayload = {};
+
+          // Add shipping address
+          purchasePayload.full_name = form.full_name;
+          purchasePayload.phone = form.phone;
+          purchasePayload.address_line1 = form.address_line1;
+          purchasePayload.city = form.city;
+          purchasePayload.postal_code = form.postal_code;
+          purchasePayload.country = "Indonesia";
+
+          // Add total amount
+          purchasePayload.total_amount = finalTotal;
+
+          // Add voucher code if selected
+          if (selectedVoucher) {
+            purchasePayload.voucher_code = selectedVoucher.code;
+          }
+
+          const purchaseResponse = await createPurchase(purchasePayload);
+          const purchaseId = purchaseResponse.data?.id || purchaseResponse.id;
+
+          // Initiate payment
+          const paymentResponse = await initiatePayment(purchaseId);
+
+          // Check for invoice_url in the response data
+          const invoiceUrl =
+            paymentResponse.data?.invoice_url || paymentResponse.invoice_url;
+
+          if (invoiceUrl) {
+            // Redirect to Xendit payment page
+            window.location.href = invoiceUrl;
+          } else {
+            console.error("No invoice_url found in response:", paymentResponse);
+            alert("Gagal mendapatkan link pembayaran. Silakan coba lagi.");
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Payment error:", err);
+      if (err.response?.data?.errors) {
+        alert(`Payment failed: ${err.response.data.errors.join(", ")}`);
+      } else {
+        alert("Pembayaran gagal. Coba lagi.");
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle voucher code input
+  const handleVoucherCodeChange = (e) => {
+    const code = e.target.value;
+    setVoucherCode(code);
+    setVoucherError("");
+    setVoucherSuccess("");
+
+    // If the code matches an existing voucher, select it
+    if (code && vouchers.length > 0) {
+      const foundVoucher = vouchers.find((v) => v.code === code);
+      if (foundVoucher) {
+        setSelectedVoucher(foundVoucher);
+      } else {
+        setSelectedVoucher(null);
+      }
+    }
+  };
+
+  // Claim selected voucher
+  const handleClaimVoucher = async () => {
+    if (!voucherCode) {
+      setVoucherError("Please enter a voucher code");
+      return;
+    }
+
+    // Check if selected voucher is already claimed
+    if (selectedVoucher && selectedVoucher.is_claimed) {
+      setVoucherError("This voucher has already been claimed");
+      return;
+    }
+
+    setVoucherLoading(true);
+    setVoucherError("");
+    setVoucherSuccess("");
+
+    try {
+      // First, try to find the voucher by code
+      let voucherToClaim = selectedVoucher;
+
+      if (!voucherToClaim) {
+        // If no voucher is selected, try to get it by code from the available vouchers
+        voucherToClaim = vouchers.find((v) => v.code === voucherCode);
+      }
+
+      // Check again if the voucher is already claimed
+      if (voucherToClaim && voucherToClaim.is_claimed) {
+        setVoucherError("This voucher has already been claimed");
+        setVoucherLoading(false);
+        return;
+      }
+
+      if (voucherToClaim) {
+        // Claim the voucher
+        await claimVoucher(voucherToClaim.id);
+        setVoucherSuccess("Voucher claimed successfully!");
+        setSelectedVoucher({ ...voucherToClaim, is_claimed: true });
+
+        // Refresh vouchers after claiming
+        const response = await getAllVouchers();
+        const vouchersData = response.data || response || [];
+        // Filter for product vouchers only
+        const productVouchers = vouchersData.filter(
+          (voucher) => voucher.type === "product" || !voucher.type
+        );
+        setVouchers(productVouchers);
+
+        setTimeout(() => {
+          setVoucherSuccess("");
+          setShowVoucherModal(false);
+        }, 2000);
+      } else {
+        setVoucherError("Invalid voucher code");
+      }
+    } catch (err) {
+      console.error("Error claiming voucher:", err);
+      setVoucherError(err.response?.data?.message || "Failed to claim voucher");
+    } finally {
+      setVoucherLoading(false);
+    }
+  };
+
+  // Remove selected voucher
+  const handleRemoveVoucher = () => {
+    setSelectedVoucher(null);
+    setVoucherCode("");
+  };
+
+  return (
+    <div className="max-w-3xl mx-auto p-6 mt-20 flex flex-col gap-y-3">
+      <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => navigate("/peacetifal/store")}
+            className="flex items-center text-white hover:bg-blue-900 bg-blue-700 rounded-xl px-4 py-2"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-5 w-5 mr-1"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
+              <path
+                fillRule="evenodd"
+                d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+            Back to Store
+          </button>
+          <h1 className="text-xl font-bold">YOUR ORDER</h1>
+        </div>
+      </section>
+      {/* Alamat */}
+      <OrderSummary form={form} />
+
+      {/* Produk */}
+      <ProductList 
+        items={items}
+        selectedVoucher={selectedVoucher}
+        discountAmount={discountAmount}
+        originalTotal={originalTotal}
+        finalTotal={finalTotal}
+      />
+
+      {/* Voucher Section */}
+      <VoucherSection 
+        selectedVoucher={selectedVoucher}
+        onRemoveVoucher={handleRemoveVoucher}
+        onShowVoucherModal={() => setShowVoucherModal(true)}
+      />
+
+      {/* Payment Button */}
+      <button
+        onClick={handlePayment}
+        disabled={loading}
+        className={`w-full py-3 rounded-lg font-bold ${
+          loading
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-black text-white hover:bg-gray-800"
+        }`}
+      >
+        {loading ? "Proses Pembayaran..." : `Beli`}
+      </button>
+
+      {/* Voucher Modal */}
+      {showVoucherModal && (
+        <div className="fixed inset-0 bg-black flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Enter Voucher Code</h2>
+
+            {voucherSuccess && (
+              <div className="mb-4 p-3 bg-green-100 text-green-800 rounded">
+                {voucherSuccess}
+              </div>
+            )}
+
+            {voucherError && (
+              <div className="mb-4 p-3 bg-red-100 text-red-800 rounded">
+                {voucherError}
+              </div>
+            )}
+
+            <input
+              type="text"
+              value={voucherCode}
+              onChange={handleVoucherCodeChange}
+              placeholder="Enter voucher code"
+              className="w-full border p-3 rounded mb-4"
+              disabled={voucherLoading}
+            />
+
+            {/* <div className="flex gap-3">
+              <button
+                onClick={() => setShowVoucherModal(false)}
+                className="flex-1 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                disabled={voucherLoading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleClaimVoucher}
+                disabled={voucherLoading || !voucherCode}
+                className={`flex-1 py-2 rounded text-white ${
+                  voucherLoading || !voucherCode
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-500 hover:bg-blue-600"
+                }`}
+              >
+                {voucherLoading ? "Claiming..." : "Claim"}
+              </button>
+            </div> */}
+
+            {/* Available Vouchers */}
+            {vouchers.length > 0 && (
+              <div className="mt-6">
+                <h3 className="font-bold mb-2">Available Vouchers:</h3>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {vouchers.map((voucher) => (
+                    <div
+                      key={voucher.id}
+                      className="border p-3 rounded cursor-pointer hover:bg-gray-50"
+                      onClick={() => {
+                        // Only allow selection if voucher is not already claimed
+                        if (!voucher.is_claimed) {
+                          setVoucherCode(voucher.code);
+                          setSelectedVoucher(voucher);
+                        }
+                      }}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <div className="flex items-center">
+                            <span className="font-bold">{voucher.code}</span>
+                            {voucher.is_claimed && (
+                              <span className="ml-2 bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                                Claimed
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-sm text-green-600">
+                            {voucher.discount_type === "percentage"
+                              ? `${voucher.discount_value}% OFF`
+                              : `Rp ${parseFloat(
+                                  voucher.discount_value
+                                ).toLocaleString()} OFF`}
+                          </p>
+                        </div>
+                        {!voucher.is_claimed ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setVoucherCode(voucher.code);
+                              setSelectedVoucher(voucher);
+                              handleClaimVoucher();
+                            }}
+                            disabled={voucherLoading}
+                            className={`px-3 py-1 rounded text-white text-sm ${
+                              voucherLoading
+                                ? "bg-gray-400 cursor-not-allowed"
+                                : "bg-blue-500 hover:bg-blue-600"
+                            }`}
+                          >
+                            {voucherLoading ? "Claiming..." : "Claim"}
+                          </button>
+                        ) : (
+                          <button
+                            disabled={true}
+                            className="px-3 py-1 rounded text-gray-500 text-sm bg-gray-200 cursor-not-allowed"
+                          >
+                            Claimed
+                          </button>
+                        )}
+                      </div>
+                      {voucher.min_order_value && (
+                        <p className="text-sm text-gray-600">
+                          Min. order: Rp{" "}
+                          {parseFloat(voucher.min_order_value).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

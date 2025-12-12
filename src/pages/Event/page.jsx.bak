@@ -1,0 +1,261 @@
+import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { getEvents } from "../../api/event";
+import { IMAGE_BASE_URL } from "../../api/apiClient";
+import NoDataMessage from "../../components/NoDataMessage";
+
+export default function EventPage() {
+  const navigate = useNavigate();
+  const [events, setEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // FETCH EVENTS
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const response = await getEvents();
+        const eventsData = response.data || response;
+
+        setEvents(eventsData);
+
+        if (eventsData.length > 0) {
+          setSelectedEvent(eventsData[0]);
+        }
+      } catch (err) {
+        setError("Failed to load events");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
+  const concluded = events.length > 1 ? [...events].slice(1) : [];
+
+  const handleGetTicket = (event) => {
+    navigate("/peacetifal/store", {
+      state: {
+        searchFromEvent: event.title,
+      },
+    });
+  };
+
+  // Handle view vouchers button click
+  // const handleViewVouchers = () => {
+  //   // Navigate to the dedicated vouchers page
+  //   navigate("/peacetifal/event/vouchers");
+  // };
+
+  const handleViewVouchers = () => navigate("/peacetifal/event/vouchers");
+
+  const formatDate = (date) =>
+    new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+  const formatTime = (date) =>
+    new Date(date).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
+  if (loading)
+    return (
+      <div className="pt-28 min-h-screen flex items-center justify-center text-lg">
+        Loading events...
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="pt-28 min-h-screen flex items-center justify-center text-red-500 text-lg">
+        {error}
+      </div>
+    );
+
+  if (!selectedEvent)
+    return (
+      <div className="pt-28 min-h-screen">
+        <div className="max-w-6xl mx-auto px-5 sm:px-6">
+          <NoDataMessage
+            title="No Events Available"
+            message="Please check back later."
+            actionText="Go to Home"
+            onAction={() => navigate("/peacetifal/home")}
+          />
+        </div>
+      </div>
+    );
+
+  return (
+    <div className="pt-28 min-h-screen">
+      <div className="max-w-6xl mx-auto px-5 sm:px-6 lg:px-8">
+        {/* NEW EVENT TITLE */}
+        <h1 className="text-2xl font-bold mb-6 uppercase tracking-wide underline underline-offset-8 text-center sm:text-left">
+          New Event
+        </h1>
+
+        {/* CURRENT EVENT CARD */}
+        <div className="bg-white rounded-lg shadow overflow-hidden pb-8">
+          {/* TITLE */}
+          <div className="text-center text-xl sm:text-2xl font-bold uppercase py-4 px-4">
+            {selectedEvent.title}
+          </div>
+
+          {/* IMAGE BANNER */}
+          {selectedEvent.images && selectedEvent.images.length > 0 ? (
+            <img
+              src={
+                selectedEvent.images[0].startsWith("/api/v1/")
+                  ? `${IMAGE_BASE_URL}${selectedEvent.images[0]}`
+                  : selectedEvent.images[0].startsWith("/uploads/")
+                  ? `${IMAGE_BASE_URL}/api/v1${selectedEvent.images[0]}`
+                  : `${IMAGE_BASE_URL}/api/v1/uploads/${selectedEvent.images[0]}`
+              }
+              alt={selectedEvent.title}
+              className="w-full h-[240px] sm:h-[300px] md:h-[350px] object-cover"
+            />
+          ) : selectedEvent.image ? (
+            <img
+              src={
+                selectedEvent.image.startsWith("/api/v1/")
+                  ? `${IMAGE_BASE_URL}${selectedEvent.image}`
+                  : selectedEvent.image.startsWith("/uploads/")
+                  ? `${IMAGE_BASE_URL}/api/v1${selectedEvent.image}`
+                  : `${IMAGE_BASE_URL}/api/v1/uploads/${selectedEvent.image}`
+              }
+              alt={selectedEvent.title}
+              className="w-full h-[240px] sm:h-[300px] md:h-[350px] object-cover"
+            />
+          ) : (
+            <div className="w-full h-[240px] sm:h-[300px] bg-gray-200 flex items-center justify-center">
+              <span className="text-gray-500">No Event Image</span>
+            </div>
+          )
+
+          {/* DESCRIPTION */}
+          <div className="px-5 sm:px-8 mt-6 text-center">
+            <h2 className="text-xl sm:text-2xl font-bold mb-2 uppercase">
+              {selectedEvent.title}
+            </h2>
+
+            <p className="text-gray-600 text-sm max-w-2xl mx-auto leading-relaxed">
+              {selectedEvent.description}
+            </p>
+          </div>
+
+          {/* INFO GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-4 mt-8 border-t border-gray-300">
+            {/* Location */}
+            <div className="p-4 border-b md:border-b-0 md:border-r border-gray-200 text-center sm:text-left">
+              <h3 className="font-bold text-sm uppercase">Location</h3>
+              <p className="text-sm text-gray-700">{selectedEvent.location}</p>
+            </div>
+
+            {/* Date */}
+            <div className="p-4 border-b md:border-b-0 md:border-r border-gray-200 text-center sm:text-left">
+              <h3 className="font-bold text-sm uppercase">Date</h3>
+              <p className="text-sm text-gray-700">
+                {formatDate(selectedEvent.start_date)}
+              </p>
+            </div>
+
+            {/* Time */}
+            <div className="p-4 border-b md:border-b-0 md:border-r border-gray-200 text-center sm:text-left">
+              <h3 className="font-bold text-sm uppercase">Time</h3>
+              <p className="text-sm text-gray-700">
+                {formatTime(selectedEvent.start_date)}
+              </p>
+            </div>
+
+            {/* BUTTONS */}
+            <div className="flex flex-col items-center justify-center p-4 gap-2">
+              <button
+                onClick={() => handleGetTicket(selectedEvent)}
+                className="bg-black text-white px-6 py-2 rounded w-full md:w-auto hover:bg-gray-800 transition"
+              >
+                Get Ticket
+              </button>
+              {/* <button
+                onClick={handleViewVouchers}
+                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+              >
+                View All Vouchers
+              </button> */}
+            </div>
+          </div>
+        </div>
+
+        {/* EVENT CONCLUDED */}
+        {concluded.length > 0 ? (
+          <>
+            <h2 className="text-xl font-bold mt-12 mb-4 uppercase tracking-wide">
+              Event Concluded
+            </h2>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5 sm:gap-6">
+              {concluded.map((ev) => (
+                <button
+                  key={ev.id}
+                  onClick={() => setSelectedEvent(ev)}
+                  className="bg-white rounded-lg shadow hover:shadow-lg transition text-left overflow-hidden"
+                >
+                  {ev.images && ev.images.length > 0 ? (
+                    <img
+                      src={
+                        ev.images[0].startsWith("/api/v1/")
+                          ? `${IMAGE_BASE_URL}${ev.images[0]}`
+                          : ev.images[0].startsWith("/uploads/")
+                          ? `${IMAGE_BASE_URL}/api/v1${ev.images[0]}`
+                          : `${IMAGE_BASE_URL}/api/v1/uploads/${ev.images[0]}`
+                      }
+                      alt={ev.title}
+                      className="w-full h-36 sm:h-40 md:h-48 object-cover"
+                    />
+                  ) : ev.image ? (
+                    <img
+                      src={
+                        ev.image.startsWith("/api/v1/")
+                          ? `${IMAGE_BASE_URL}${ev.image}`
+                          : ev.image.startsWith("/uploads/")
+                          ? `${IMAGE_BASE_URL}/api/v1${ev.image}`
+                          : `${IMAGE_BASE_URL}/api/v1/uploads/${ev.image}`
+                      }
+                      alt={ev.title}
+                      className="w-full h-36 sm:h-40 md:h-48 object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-36 sm:h-40 bg-gray-200 flex items-center justify-center">
+                      <span className="text-gray-500 text-sm">No Image</span>
+                    </div>
+                  )}
+
+                  <div className="p-3 sm:p-4">
+                    <h3 className="font-semibold text-sm sm:text-base leading-snug">
+                      {ev.title}
+                    </h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {formatDate(ev.start_date)}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="mt-12">
+            <NoDataMessage
+              title="No Past Events"
+              message="There are no concluded events."
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

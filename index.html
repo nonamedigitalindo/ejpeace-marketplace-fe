@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/src/assets/EJPEACE.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+    />
+    <title>eJPeace Entertainment</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      async function loadSpotifyTitles() {
+        const cards = document.querySelectorAll(".spotify-card");
+
+        cards.forEach(async (card) => {
+          const url = card.getAttribute("data-url");
+
+          const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(
+            url
+          )}`;
+          const res = await fetch(proxy).then((r) => r.json());
+          const html = res.contents;
+
+          const match = html.match(/<meta property="og:title" content="(.*?)"/);
+
+          if (match) {
+            card.querySelector(".spotify-title").innerText = match[1];
+          }
+        });
+      }
+
+      loadSpotifyTitles();
+    </script>
+  </body>
+</html>
