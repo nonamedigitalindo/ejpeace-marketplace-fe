@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { FaSearch, FaFilter, FaMoneyBillWave, FaClock, FaCheckCircle, FaTimesCircle, FaBoxOpen, FaSpinner, FaEnvelope, FaFileExcel } from "react-icons/fa";
 import { getOrders, exportOrdersXLSX } from "../../api/order";
-import { getUserById } from "../../api/user";
+
 
 export default function AdminOrders() {
   const [orders, setOrders] = useState([]);
@@ -32,28 +32,8 @@ export default function AdminOrders() {
               ? response.results
               : [];
 
-      // Fetch user emails for each order
-      const ordersWithEmails = await Promise.all(
-        safeData.map(async (order) => {
-          try {
-            if (order.user_id) {
-              const userRes = await getUserById(order.user_id);
-              const user = userRes?.data ?? userRes;
-              return {
-                ...order,
-                user_email: user?.email || 'No email',
-                username: user?.username || 'Guest'
-              };
-            }
-            return { ...order, user_email: 'No email', username: 'Guest' };
-          } catch (err) {
-            console.error(`Error fetching user ${order.user_id}:`, err);
-            return { ...order, user_email: 'No email', username: 'Unknown' };
-          }
-        })
-      );
-
-      setOrders(ordersWithEmails);
+      // Backend now provides user_email and username directly
+      setOrders(safeData);
     } catch (error) {
       console.error("Error fetching orders:", error);
       setOrders([]);
@@ -323,7 +303,9 @@ export default function AdminOrders() {
                   </div>
                   <div>
                     <p className="font-bold text-gray-900 group-hover:text-yellow-600 transition-colors">{order.user_email || "Guest"}</p>
-                    <p className="text-xs text-gray-500">User ID: {order.user_id}</p>
+                    <p className="text-xs text-gray-500">
+                      {order.username || "Guest"}
+                    </p>
                   </div>
                 </div>
 
@@ -343,7 +325,8 @@ export default function AdminOrders() {
             ))
           )}
         </div>
-      )}
-    </div>
+      )
+      }
+    </div >
   );
 }
