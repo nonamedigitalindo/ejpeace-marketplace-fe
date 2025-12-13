@@ -95,13 +95,49 @@ export default function AdminEvents() {
       const res = await getEventById(id);
       const data = res?.data ?? res ?? {};
 
+      console.log("Edit Event Data:", data);
+
       // Handle both single image (string) and multiple images (array)
       let existingImages = [];
-      if (data.images && Array.isArray(data.images)) {
-        existingImages = data.images;
+
+      // Robust parsing of data.images
+      if (data.images) {
+        let rawImages = data.images;
+
+        // Convert string to array if needed
+        if (typeof rawImages === 'string') {
+          try {
+            if (rawImages.trim().startsWith('[')) {
+              rawImages = JSON.parse(rawImages);
+            } else {
+              rawImages = rawImages.includes(',')
+                ? rawImages.split(',').map(s => s.trim())
+                : [rawImages];
+            }
+          } catch (e) {
+            console.error("Failed to parse images string:", e);
+            rawImages = [rawImages];
+          }
+        }
+
+        // Ensure it is an array
+        if (!Array.isArray(rawImages)) {
+          rawImages = [rawImages];
+        }
+
+        // Map objects to strings (image_url)
+        existingImages = rawImages.map(img => {
+          if (typeof img === 'object' && img !== null) {
+            return img.image_url || img.url || "";
+          }
+          return img;
+        }).filter(Boolean); // Remove empty strings
+
       } else if (data.image) {
         existingImages = [data.image];
       }
+
+      console.log("Parsed Existing Images:", existingImages);
 
       setSelectedId(id);
       setEditForm({
@@ -199,9 +235,6 @@ export default function AdminEvents() {
       const startDateUTC = localInputToUTC(addForm.start_date);
       const endDateUTC = localInputToUTC(addForm.end_date);
 
-      // ================================
-      // STEP 1 — CREATE EVENT (with first image only)
-      // ================================
       const fd = new FormData();
       fd.append("title", addForm.title.trim());
       fd.append("description", addForm.description.trim());
@@ -211,73 +244,16 @@ export default function AdminEvents() {
       fd.append("start_date", startDateUTC);
       fd.append("end_date", endDateUTC);
 
-      // Upload first image if exists
-      if (addForm.images.length > 0 && addForm.images[0] instanceof File) {
-        fd.append("image", addForm.images[0]);
-      }
-
-      const result = await addEvent(fd);
-      const eventData = result.data || result;
-      const eventId = eventData.id;
-
-      if (!eventId) {
-        throw new Error("The server did not return the event ID.");
-      }
-
-      // ================================
-      // STEP 2 — UPLOAD ADDITIONAL IMAGES ONE BY ONE
-      // Fetch event data after each upload to get current images
-      // ================================
-      if (addForm.images.length > 1) {
-        console.log(`Uploading ${addForm.images.length - 1} additional images...`);
-
-        for (let i = 1; i < addForm.images.length; i++) {
-          // GET current event data to retrieve existing images
-          const currentEvent = await getEventById(eventId);
-          const currentData = currentEvent?.data ?? currentEvent ?? {};
-
-          // Get current images
-          let currentImages = [];
-          if (currentData.images && Array.isArray(currentData.images)) {
-            currentImages = currentData.images;
-          } else if (currentData.image) {
-            currentImages = [currentData.image];
+      // Append all images
+      if (addForm.images.length > 0) {
+        addForm.images.forEach((file) => {
+          if (file instanceof File) {
+            fd.append("image", file);
           }
-
-          // Clean image paths
-          const cleanedImages = currentImages.map(img => {
-            return typeof img === 'string'
-              ? img.replace('http://localhost:3000', '')
-                .replace('http://212.85.27.163', '')
-                .replace(/^https?:\/\/[^\/]+/, '')
-              : img;
-          });
-
-          const updateFd = new FormData();
-          updateFd.append("title", addForm.title.trim());
-          updateFd.append("description", addForm.description.trim());
-          updateFd.append("location", addForm.location.trim());
-          updateFd.append("price", "0");
-          updateFd.append("discount_percentage", "0");
-          updateFd.append("start_date", startDateUTC);
-          updateFd.append("end_date", endDateUTC);
-
-          // Keep existing images
-          updateFd.append("existingImages", JSON.stringify(cleanedImages));
-
-          // Upload ONE new image
-          if (addForm.images[i] instanceof File) {
-            updateFd.append("image", addForm.images[i]);
-          }
-
-          console.log(`Uploading image ${i + 1}/${addForm.images.length}...`);
-          console.log(`Preserving ${cleanedImages.length} existing images`);
-
-          await updateEvent(eventId, updateFd);
-        }
-
-        console.log('All images uploaded successfully');
+        });
       }
+
+      await addEvent(fd);
 
       showAlert('success', `Event created successfully with ${addForm.images.length} image(s)!`);
       setAddForm(emptyForm);
@@ -310,83 +286,37 @@ export default function AdminEvents() {
       const startDateUTC = localInputToUTC(editForm.start_date);
       const endDateUTC = localInputToUTC(editForm.end_date);
 
-      // ================================
-      // UPLOAD NEW IMAGES ONE BY ONE
-      // Fetch event data after each upload to get current images
-      // ================================
+      // Clean image paths
+      const cleanedImages = editForm.existingImages.map(img => {
+        return typeof img === 'string'
+          ? img.replace('http://localhost:3000', '')
+            .replace('http://212.85.27.163', '')
+            .replace(/^https?:\/\/[^\/]+/, '')
+          : img;
+      });
+
+      const fd = new FormData();
+      fd.append("title", editForm.title ?? "");
+      fd.append("description", editForm.description ?? "");
+      fd.append("location", editForm.location ?? "");
+      fd.append("price", editForm.price ?? 0);
+      fd.append("discount_percentage", String(editForm.discount_percentage ?? 0));
+      fd.append("start_date", startDateUTC);
+      fd.append("end_date", endDateUTC);
+
+      // Keep existing images
+      fd.append("existingImages", JSON.stringify(cleanedImages));
+
+      // Append new images using 'image' key
       if (editForm.images.length > 0) {
-        console.log(`Uploading ${editForm.images.length} new images...`);
-
-        for (let i = 0; i < editForm.images.length; i++) {
-          // GET current event data to retrieve existing images
-          const currentEvent = await getEventById(selectedId);
-          const currentData = currentEvent?.data ?? currentEvent ?? {};
-
-          // Get current images
-          let currentImages = [];
-          if (currentData.images && Array.isArray(currentData.images)) {
-            currentImages = currentData.images;
-          } else if (currentData.image) {
-            currentImages = [currentData.image];
+        editForm.images.forEach((file) => {
+          if (file instanceof File) {
+            fd.append("image", file);
           }
-
-          // Clean image paths
-          const cleanedImages = currentImages.map(img => {
-            return typeof img === 'string'
-              ? img.replace('http://localhost:3000', '')
-                .replace('http://212.85.27.163', '')
-                .replace(/^https?:\/\/[^\/]+/, '')
-              : img;
-          });
-
-          const fd = new FormData();
-          fd.append("title", editForm.title ?? "");
-          fd.append("description", editForm.description ?? "");
-          fd.append("location", editForm.location ?? "");
-          fd.append("price", editForm.price ?? 0);
-          fd.append("discount_percentage", String(editForm.discount_percentage ?? 0));
-          fd.append("start_date", startDateUTC);
-          fd.append("end_date", endDateUTC);
-
-          // Keep existing images
-          fd.append("existingImages", JSON.stringify(cleanedImages));
-
-          // Upload ONE new image
-          if (editForm.images[i] instanceof File) {
-            fd.append("image", editForm.images[i]);
-          }
-
-          console.log(`Uploading image ${i + 1}/${editForm.images.length}...`);
-          console.log(`Preserving ${cleanedImages.length} existing images`);
-
-          await updateEvent(selectedId, fd);
-        }
-
-        console.log('All images uploaded successfully');
-      } else {
-        // No new images, just update text data + preserve existing
-        const fd = new FormData();
-        fd.append("title", editForm.title ?? "");
-        fd.append("description", editForm.description ?? "");
-        fd.append("location", editForm.location ?? "");
-        fd.append("price", editForm.price ?? 0);
-        fd.append("discount_percentage", String(editForm.discount_percentage ?? 0));
-        fd.append("start_date", startDateUTC);
-        fd.append("end_date", endDateUTC);
-
-        if (editForm.existingImages.length > 0) {
-          const imagePaths = editForm.existingImages.map(img => {
-            return typeof img === 'string'
-              ? img.replace('http://localhost:3000', '')
-                .replace('http://212.85.27.163', '')
-                .replace(/^https?:\/\/[^\/]+/, '')
-              : img;
-          });
-          fd.append("existingImages", JSON.stringify(imagePaths));
-        }
-
-        await updateEvent(selectedId, fd);
+        });
       }
+
+      await updateEvent(selectedId, fd);
 
       console.log("✅ Event updated successfully");
       showAlert('success', 'Event updated successfully!');
@@ -533,14 +463,18 @@ export default function AdminEvents() {
                       <td className="p-5">
                         {eventImages.length > 0 ? (
                           <div className="flex -space-x-3 hover:space-x-1 transition-all">
-                            {eventImages.slice(0, 3).map((img, idx) => (
-                              <img
-                                key={idx}
-                                src={resolveImageSrc(img)}
-                                alt={`Img ${idx}`}
-                                className="w-10 h-10 object-cover rounded-full border-2 border-white shadow-sm hover:scale-125 transition-transform z-10"
-                              />
-                            ))}
+                            {eventImages.slice(0, 3).map((img, idx) => {
+                              // Handle object structure if present
+                              const imgSrc = typeof img === 'object' && img !== null ? (img.image_url || img.url) : img;
+                              return (
+                                <img
+                                  key={idx}
+                                  src={resolveImageSrc(imgSrc)}
+                                  alt={`Img ${idx}`}
+                                  className="w-10 h-10 object-cover rounded-full border-2 border-white shadow-sm hover:scale-125 transition-transform z-10"
+                                />
+                              );
+                            })}
                             {eventImages.length > 3 && (
                               <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center text-xs font-bold text-yellow-700 border-2 border-white z-0">
                                 +{eventImages.length - 3}

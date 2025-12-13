@@ -15,6 +15,15 @@ export const PLACEHOLDER_BASE64 =
 export function resolveImageSrc(img) {
   if (!img) return PLACEHOLDER_BASE64;
 
+  // Handle object/array input (e.g. backend returning {id, image_url} or [img1, img2])
+  if (typeof img === 'object' && img !== null) {
+    if (Array.isArray(img)) {
+      return img.length > 0 ? resolveImageSrc(img[0]) : PLACEHOLDER_BASE64;
+    }
+    if (img.image_url) return resolveImageSrc(img.image_url);
+    if (img.url) return resolveImageSrc(img.url);
+  }
+
   // normalize to string and guard against accidental double-URLs
   let str = String(img);
   // if the string contains more than one 'http' substring, it likely has been

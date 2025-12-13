@@ -6,8 +6,16 @@ export default function CreateProductPage() {
   const navigate = useNavigate();
 
   const handleCreate = async (formData) => {
-    await addProduct(formData);
-    navigate("/ejpeace/internal/admin-products");
+    try {
+      console.log("Creating product...", formData);
+      const result = await addProduct(formData);
+      console.log("Product created successfully:", result);
+      alert("Product created successfully!");
+      navigate("/ejpeace/internal/admin-products");
+    } catch (error) {
+      console.error("Failed to create product:", error);
+      alert("Failed to create product: " + (error.response?.data?.message || error.message || "Unknown error"));
+    }
   };
 
   return (

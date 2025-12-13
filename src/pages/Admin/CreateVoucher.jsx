@@ -289,8 +289,8 @@ export default function CRUDVoucher() {
                       </td>
                       <td className="p-5">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${v.is_active === 1
-                            ? 'bg-green-100 text-green-700 border-green-200'
-                            : 'bg-red-50 text-red-600 border-red-100'
+                          ? 'bg-green-100 text-green-700 border-green-200'
+                          : 'bg-red-50 text-red-600 border-red-100'
                           }`}>
                           {v.is_active === 1 ? 'Active' : 'Inactive'}
                         </span>

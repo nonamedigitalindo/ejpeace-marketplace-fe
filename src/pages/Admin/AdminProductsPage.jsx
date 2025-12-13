@@ -111,15 +111,32 @@ export default function AdminProducts() {
             </div>
           ) : (
             filteredProducts.map((p, index) => {
-              // Safely extract first image
-              let firstImage = p.image;
-              if (Array.isArray(p.images) && p.images.length > 0) {
-                firstImage = p.images[0];
-              } else if (typeof p.images === 'string' && p.images.startsWith('[')) {
-                try {
-                  const parsed = JSON.parse(p.images);
-                  if (parsed.length > 0) firstImage = parsed[0];
-                } catch (e) { /* ignore */ }
+              // Safely extract first image - handle various formats including nested arrays
+              let firstImage = null;
+
+              // Helper to unwrap nested arrays and get first string
+              const unwrapImage = (img) => {
+                if (!img) return null;
+                if (typeof img === 'string') return img;
+                if (Array.isArray(img) && img.length > 0) return unwrapImage(img[0]);
+                if (typeof img === 'object' && img !== null) {
+                  return img.image_url || img.url || null;
+                }
+                return null;
+              };
+
+              // Check p.images first (could be nested array like [["url"]])
+              if (p.images) {
+                firstImage = unwrapImage(p.images);
+              }
+              // Fallback to single image field
+              else if (p.image) {
+                firstImage = unwrapImage(p.image);
+              }
+
+              // Final safety: ensure it's a string
+              if (firstImage && typeof firstImage !== 'string') {
+                firstImage = unwrapImage(firstImage);
               }
 
               return (
@@ -135,7 +152,7 @@ export default function AdminProducts() {
                           src={resolveImageSrc(firstImage)}
                           alt={p.name}
                           className="w-full h-full object-cover"
-                          onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'block'; }}
+                          onError={(e) => { e.target.style.display = 'none'; if (e.target.nextSibling) e.target.nextSibling.style.display = 'block'; }}
                         />
                       ) : null}
                       {/* Fallback Icon */}

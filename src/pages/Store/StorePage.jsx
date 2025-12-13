@@ -11,9 +11,9 @@ export default function StorePage() {
   const location = useLocation();
   const searchFromEvent = location.state?.searchFromEvent || "";
 
-  const [filter, setFilter] = useState("all");
-  const [searchText, setSearchText] = useState("");
-  const [debouncedSearchText, setDebouncedSearchText] = useState("");
+  const [filter, setFilter] = useState("all"); // Always default to all products
+  const [searchText, setSearchText] = useState(searchFromEvent);
+  const [debouncedSearchText, setDebouncedSearchText] = useState(searchFromEvent);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -24,8 +24,8 @@ export default function StorePage() {
     try {
       setLoading(true);
       const res = await getProducts();
-      setProducts(res.data || res);
-      console.log("✅ Products fetched successfully");
+      const productData = Array.isArray(res) ? res : (res.data || res.products || []);
+      setProducts(productData);
     } catch (error) {
       console.error("Error fetching products:", error);
     } finally {
@@ -58,13 +58,6 @@ export default function StorePage() {
       );
     };
   }, []);
-
-  // Auto search from Event Page
-  useEffect(() => {
-    if (searchFromEvent) {
-      setSearchText(searchFromEvent);
-    }
-  }, [searchFromEvent]);
 
   // Implement debounced search with 500ms delay
   useEffect(() => {
@@ -100,6 +93,12 @@ export default function StorePage() {
     return matchCategory && matchSearch;
   });
 
+  // DEBUG: Log filter state
+  console.log("DEBUG - Filter state:", { filter, debouncedSearchText, productsCount: products.length, filteredCount: filtered.length });
+  if (products.length > 0 && filtered.length === 0) {
+    console.log("DEBUG - Products categories:", products.map(p => p.category));
+  }
+
   if (loading) {
     return <p className="p-6 text-center">Loading products...</p>;
   }
@@ -107,17 +106,18 @@ export default function StorePage() {
   return (
     <div
       className="pt-24 min-h-screen bg-cover bg-center bg-repeat"
-      // style={{ backgroundImage: `url(${bgStore})` }}
+    // style={{ backgroundImage: `url(${bgStore})` }}
     >
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-3 px-4 sm:px-6 lg:px-8">
         {/* SIDEBAR → tampil di atas saat mobile */}
         <div className="order-1 lg:col-span-3">
           <StoreSidebar
+            key={searchText}
             filter={filter}
             setFilter={setFilter}
             products={products}
             onSearch={(txt) => setSearchText(txt)}
-            initialSearch={searchFromEvent}
+            initialSearch={searchText}
           />
         </div>
         {/* PRODUCT LIST */}
