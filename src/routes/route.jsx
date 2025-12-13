@@ -83,18 +83,18 @@ const route = createBrowserRouter([
       {
         path: "store",
         element: (
-          <ProtectedRoute>
-            <StorePage />
-          </ProtectedRoute>
+          // <ProtectedRoute>
+          <StorePage />
+          // </ProtectedRoute>
         ),
       },
 
       {
         path: "store/product/:id",
         element: (
-          <ProtectedRoute>
-            <ProductDetailPage />
-          </ProtectedRoute>
+          // <ProtectedRoute>
+          <ProductDetailPage />
+          // </ProtectedRoute>
         ),
       },
 

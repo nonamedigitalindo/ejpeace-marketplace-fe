@@ -74,13 +74,15 @@ export default function AuthCard({ isRegister: isRegisterProp = false }) {
       }
 
       showAlert("success", "Login berhasil!");
-      setTimeout(() => {
-        if (response.data.user.role === "admin") {
-          navigate("/ejpeace/internal");
-        } else {
-          navigate("/ejpeace/home");
-        }
-      }, 1500);
+      // setTimeout(() => {
+      if (response.data.user.role === "admin") {
+        navigate("/ejpeace/internal");
+        return;
+      } else {
+        navigate("/ejpeace/home");
+        return;
+      }
+      // }, 1500);
     } catch (error) {
       console.error("LOGIN ERROR:", error);
       showAlert("error", error.message || "Login gagal!");
@@ -129,11 +131,10 @@ export default function AuthCard({ isRegister: isRegisterProp = false }) {
       {/* Custom Alert */}
       {alert.show && (
         <div
-          className={`fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50 animate-fadeIn ${
-            alert.type === "success"
-              ? "bg-green-500 text-white"
-              : "bg-red-500 text-white"
-          }`}
+          className={`fixed top-4 left-1/2 transform -translate-x-1/2 px-6 py-3 rounded-lg shadow-lg z-50 animate-fadeIn ${alert.type === "success"
+            ? "bg-green-500 text-white"
+            : "bg-red-500 text-white"
+            }`}
         >
           <div className="flex items-center">
             {alert.type === "success" ? (

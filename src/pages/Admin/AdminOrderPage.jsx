@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { FaSearch, FaFilter, FaMoneyBillWave, FaClock, FaCheckCircle, FaTimesCircle, FaBoxOpen, FaSpinner, FaEnvelope } from "react-icons/fa";
-import { getOrders } from "../../api/order";
+import { FaSearch, FaFilter, FaMoneyBillWave, FaClock, FaCheckCircle, FaTimesCircle, FaBoxOpen, FaSpinner, FaEnvelope, FaFileExcel } from "react-icons/fa";
+import { getOrders, exportOrdersXLSX } from "../../api/order";
 import { getUserById } from "../../api/user";
 
 export default function AdminOrders() {
@@ -11,6 +11,7 @@ export default function AdminOrders() {
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -152,6 +153,33 @@ export default function AdminOrders() {
           <h1 className="text-3xl font-bold text-gray-900">Order Management</h1>
           <p className="text-gray-500 mt-1">Track and manage customer orders.</p>
         </div>
+        <button
+          onClick={async () => {
+            try {
+              setExporting(true);
+              await exportOrdersXLSX(startDate || null, endDate || null);
+            } catch (error) {
+              console.error("Export failed:", error);
+              alert("Failed to export orders. Please try again.");
+            } finally {
+              setExporting(false);
+            }
+          }}
+          disabled={exporting}
+          className="flex items-center gap-2 px-5 py-3 bg-linear-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+        >
+          {exporting ? (
+            <>
+              <FaSpinner className="animate-spin" />
+              Exporting...
+            </>
+          ) : (
+            <>
+              <FaFileExcel />
+              Export XLSX
+            </>
+          )}
+        </button>
       </div>
 
       {/* Stats Cards */}

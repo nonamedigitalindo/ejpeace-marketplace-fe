@@ -57,3 +57,35 @@ export const applyVoucherToTicket = async (ticketId, voucherCode) => {
   });
   return res.data;
 };
+
+// ============ SCOPED VOUCHER API FUNCTIONS ============
+
+// ADD VOUCHER WITH PRODUCT/EVENT SCOPING
+export const addScopedVoucher = async (voucherData) => {
+  const res = await api.post("/vouchers/scoped", voucherData);
+  return res.data;
+};
+
+// GET VOUCHER WITH SCOPING (includes products/events)
+export const getScopedVoucherById = async (id) => {
+  const res = await api.get(`/vouchers/scoped/${id}`);
+  return res.data;
+};
+
+// UPDATE VOUCHER WITH SCOPING
+export const updateScopedVoucher = async (id, voucherData) => {
+  const res = await api.put(`/vouchers/scoped/${id}`, voucherData);
+  return res.data;
+};
+
+// VALIDATE VOUCHER FOR SPECIFIC ITEMS
+export const validateVoucherForItems = async (code, orderAmount, productIds = [], eventIds = []) => {
+  const res = await api.post("/vouchers/validate-for-items", {
+    code,
+    order_amount: orderAmount,
+    product_ids: productIds,
+    event_ids: eventIds,
+  });
+  return res.data;
+};
+

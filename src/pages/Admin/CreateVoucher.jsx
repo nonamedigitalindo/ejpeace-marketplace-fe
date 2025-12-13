@@ -1,15 +1,22 @@
 import { useEffect, useState } from "react";
-import { FaTicketAlt, FaEdit, FaTrash, FaPlus, FaPercentage, FaMoneyBillWave, FaCalendarAlt, FaTimes } from "react-icons/fa";
+import { FaTicketAlt, FaEdit, FaTrash, FaPlus, FaPercentage, FaMoneyBillWave, FaCalendarAlt, FaTimes, FaBoxOpen } from "react-icons/fa";
+import Select from "react-select";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import {
   getAllVouchers,
-  addVoucher,
-  getVouchersById,
-  updateVoucher,
+  addScopedVoucher,
+  getScopedVoucherById,
+  updateScopedVoucher,
   deleteVoucher,
+  getVouchersById
 } from "../../api/voucher";
+import { getProducts } from "../../api/product";
+import { getEvents } from "../../api/event";
 
 // Converter tanggal ke format MySQL
 function toMySQLDateTime(date) {
+  if (!date) return null;
   const d = new Date(date);
   const pad = (n) => (n < 10 ? "0" + n : n);
 
@@ -36,19 +43,26 @@ export default function CRUDVoucher() {
   const [isEdit, setIsEdit] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
+  // Form State
   const [form, setForm] = useState({
     code: "",
-    // default new vouchers: fixed discount and product-type
     discount_type: "fixed",
     discount_value: "",
     max_usage: "",
     used_count: 0,
     min_order_value: "",
-    valid_from: "",
-    valid_until: "",
+    valid_from: null,
+    valid_until: null,
     is_active: 1,
-    voucher_type: "product",
+    voucher_type: { value: "product", label: "Product Voucher" }, // React Select Object
+    apply_to_all: true,
+    selected_items: [], // React Select Array of Objects
   });
+
+  // Source Data for Selects
+  const [productOptions, setProductOptions] = useState([]);
+  const [eventOptions, setEventOptions] = useState([]);
+  const [loadingItems, setLoadingItems] = useState(false);
 
   const loadVouchers = async () => {
     setLoading(true);
@@ -56,7 +70,7 @@ export default function CRUDVoucher() {
       const res = await getAllVouchers();
       const list = Array.isArray(res?.data) ? res.data : [];
 
-      // automatically disable any voucher that has reached its max usage
+      // Auto-disable maxed out vouchers
       const toDisable = list.filter((v) => {
         const max = Number(v.max_usage || 0);
         const used = Number(v.used_count || 0);
@@ -64,27 +78,18 @@ export default function CRUDVoucher() {
       });
 
       if (toDisable.length > 0) {
-        // update each voucher to set is_active = 0 (server expects full object via PUT)
         for (const v of toDisable) {
           try {
-            // fetch fresh copy to ensure payload contains all required fields
             const full = await getVouchersById(v.id);
-            const payload = {
-              ...full,
-              is_active: 0,
-            };
-            await updateVoucher(v.id, payload);
+            const payload = { ...full, is_active: 0 };
+            await updateScopedVoucher(v.id, payload);
           } catch (err) {
             console.warn(`Failed to auto-disable voucher ${v.id}`, err);
           }
         }
-
-        // reflect change in local copy
-        const updated = list.map((vv) =>
-          toDisable.some((d) => d.id === vv.id) ? { ...vv, is_active: 0 } : vv
-        );
-
-        setVouchers(updated);
+        // Refresh list
+        const refreshed = await getAllVouchers();
+        setVouchers(Array.isArray(refreshed?.data) ? refreshed.data : []);
       } else {
         setVouchers(list);
       }
@@ -97,10 +102,26 @@ export default function CRUDVoucher() {
 
   useEffect(() => {
     loadVouchers();
+    loadItems();
   }, []);
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  const loadItems = async () => {
+    setLoadingItems(true);
+    try {
+      // Load Products
+      const pRes = await getProducts();
+      const pData = pRes?.products || pRes?.data || (Array.isArray(pRes) ? pRes : []);
+      setProductOptions(pData.map(p => ({ value: p.id, label: `${p.name} - Rp ${Number(p.price).toLocaleString()}`, type: 'product' })));
+
+      // Load Events
+      const eRes = await getEvents();
+      const eData = eRes?.events || eRes?.data || (Array.isArray(eRes) ? eRes : []);
+      setEventOptions(eData.map(e => ({ value: e.id, label: `${e.title} - ${new Date(e.start_date || Date.now()).toLocaleDateString()}`, type: 'event' })));
+
+    } catch (err) {
+      console.error("Failed to load items:", err);
+    }
+    setLoadingItems(false);
   };
 
   const openAdd = () => {
@@ -111,55 +132,88 @@ export default function CRUDVoucher() {
       max_usage: "",
       used_count: 0,
       min_order_value: "",
-      valid_from: "",
-      valid_until: "",
+      valid_from: null,
+      valid_until: null,
       is_active: 1,
-      voucher_type: "product",
+      voucher_type: { value: "product", label: "Product Voucher" },
+      apply_to_all: true,
+      selected_products: [],
+      selected_events: [],
     });
     setIsEdit(false);
     setOpenModal(true);
   };
 
-  const openEdit = (voucher) => {
-    setForm({
-      code: voucher.code,
-      discount_type: voucher.discount_type,
-      discount_value: voucher.discount_value,
-      max_usage: voucher.max_usage,
-      used_count: voucher.used_count,
-      min_order_value: voucher.min_order_value,
-      valid_from: voucher.valid_from ? voucher.valid_from.slice(0, 16) : "",
-      valid_until: voucher.valid_until ? voucher.valid_until.slice(0, 16) : "",
-      is_active: voucher.is_active,
-      voucher_type: voucher.voucher_type,
-    });
+  const openEdit = async (voucher) => {
+    try {
+      const fullVoucher = (await getScopedVoucherById(voucher.id)).data;
 
-    setSelectedId(voucher.id);
-    setIsEdit(true);
-    setOpenModal(true);
+      // Determine Voucher Type Object
+      const typeOptions = [
+        { value: "general", label: "General (All Types)" },
+        { value: "product", label: "Product Voucher" },
+        { value: "event", label: "Event Voucher" },
+      ];
+      const selectedType = typeOptions.find(t => t.value === fullVoucher.voucher_type) || typeOptions[1];
+
+      // Map Selected Items
+      let selectedProducts = [];
+      let selectedEvents = [];
+
+      if (fullVoucher.products && Array.isArray(fullVoucher.products)) {
+        selectedProducts = fullVoucher.products.map(p => ({ value: p.id, label: p.name, type: 'product' }));
+      }
+      if (fullVoucher.events && Array.isArray(fullVoucher.events)) {
+        selectedEvents = fullVoucher.events.map(e => ({ value: e.id, label: e.title, type: 'event' }));
+      }
+
+      setForm({
+        code: fullVoucher.code,
+        discount_type: fullVoucher.discount_type,
+        discount_value: fullVoucher.discount_value,
+        max_usage: fullVoucher.max_usage || "",
+        used_count: fullVoucher.used_count,
+        min_order_value: fullVoucher.min_order_value || "",
+        valid_from: fullVoucher.valid_from ? new Date(fullVoucher.valid_from) : null,
+        valid_until: fullVoucher.valid_until ? new Date(fullVoucher.valid_until) : null,
+        is_active: fullVoucher.is_active,
+        voucher_type: selectedType,
+        apply_to_all: fullVoucher.apply_to_all === 1 || fullVoucher.apply_to_all === true,
+        selected_products: selectedProducts,
+        selected_events: selectedEvents,
+      });
+
+      setSelectedId(fullVoucher.id);
+      setIsEdit(true);
+      setOpenModal(true);
+    } catch (error) {
+      console.error("Failed to load voucher details:", error);
+      alert("Failed to load voucher details");
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (form.discount_type === "percent" && Number(form.discount_value) > 100) {
-      alert("Diskon percent tidak boleh lebih dari 100%");
-      return;
-    }
-
     if (!form.valid_from || !form.valid_until) {
-      alert("Tanggal mulai dan selesai wajib diisi");
+      alert("Please select both a start date and an end date.");
       return;
     }
 
-    if (new Date(form.valid_from) >= new Date(form.valid_until)) {
-      alert("Tanggal mulai tidak boleh lebih besar atau sama");
+    if (form.valid_from >= form.valid_until) {
+      alert("End date must be after the start date.");
+      return;
+    }
+
+    if (form.discount_type === "percent" && Number(form.discount_value) > 100) {
+      alert("Percentage discount cannot exceed 100%");
       return;
     }
 
     try {
       const payload = {
-        ...form,
+        code: form.code,
+        discount_type: form.discount_type,
         discount_value: Number(form.discount_value),
         max_usage: Number(form.max_usage),
         used_count: Number(form.used_count),
@@ -167,41 +221,77 @@ export default function CRUDVoucher() {
         is_active: Number(form.is_active),
         valid_from: toMySQLDateTime(form.valid_from),
         valid_until: toMySQLDateTime(form.valid_until),
+        voucher_type: form.voucher_type.value,
+        apply_to_all: form.apply_to_all,
+        product_ids: form.selected_products.map(i => i.value),
+        event_ids: form.selected_events.map(i => i.value),
       };
 
-      // If max_usage is defined and used_count reached max, force-disable the voucher
+      // Auto-disable logic
       const max = Number(payload.max_usage || 0);
       const used = Number(payload.used_count || 0);
       if (max > 0 && used >= max) {
         payload.is_active = 0;
       }
 
-      if (isEdit) await updateVoucher(selectedId, payload);
-      else await addVoucher(payload);
+      if (isEdit) await updateScopedVoucher(selectedId, payload);
+      else await addScopedVoucher(payload);
 
       setOpenModal(false);
       loadVouchers();
     } catch (err) {
       console.error("Save voucher error:", err.response?.data || err);
-      alert(`ERROR: ${err.response?.data?.error || "Gagal menyimpan voucher"}`);
+      alert(`ERROR: ${err.response?.data?.error || "Failed to save voucher"}`);
     }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Hapus voucher ini?")) return;
-
+    if (!confirm("Are you sure you want to delete this voucher?")) return;
     try {
+      // Use deleteVoucher directly. Make sure backend supports standard DELETE /vouchers/:id
       await deleteVoucher(id);
-      loadVouchers();
+
+      // Delay reload slightly to allow DB to process
+      setTimeout(() => {
+        loadVouchers();
+      }, 500);
+
     } catch (err) {
       console.error("Delete voucher error:", err);
+      alert("Failed to delete voucher.");
     }
+  };
+
+  // Styles for React Select
+  const selectStyles = {
+    control: (base, state) => ({
+      ...base,
+      borderRadius: '0.75rem', // rounded-xl
+      padding: '0.15rem',
+      borderColor: state.isFocused ? '#FBBF24' : '#E5E7EB', // yellow-400 : gray-200
+      boxShadow: state.isFocused ? '0 0 0 4px #FEF3C7' : 'none', // ring-yellow-100
+      "&:hover": {
+        borderColor: '#FBBF24'
+      }
+    }),
+    option: (base, state) => ({
+      ...base,
+      backgroundColor: state.isSelected ? '#F59E0B' : state.isFocused ? '#FEF3C7' : 'white',
+      color: state.isSelected ? 'white' : 'black',
+    })
+  };
+
+  // Filter options based on Voucher Type
+  const getFilteredOptions = () => {
+    const type = form.voucher_type.value;
+    if (type === 'product') return productOptions;
+    if (type === 'event') return eventOptions;
+    if (type === 'general') return [...productOptions, ...eventOptions];
+    return [];
   };
 
   return (
     <div className="w-full min-h-screen font-sans pb-10">
-
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Voucher Management</h1>
@@ -209,13 +299,13 @@ export default function CRUDVoucher() {
         </div>
         <button
           onClick={openAdd}
-          className="bg-gradient-to-r from-yellow-400 to-amber-500 text-black px-6 py-3 rounded-xl font-bold hover:shadow-lg hover:scale-105 transition-all flex items-center gap-2"
+          className="bg-linear-to-r from-yellow-400 to-amber-500 text-black px-6 py-3 rounded-xl font-bold hover:shadow-lg hover:scale-105 transition-all flex items-center gap-2"
         >
           <FaPlus /> Add Voucher
         </button>
       </div>
 
-      {/* Voucher Table with Floating Rows */}
+      {/* Table */}
       <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
         {loading ? (
           <div className="flex justify-center py-20">
@@ -242,7 +332,7 @@ export default function CRUDVoucher() {
                     <tr key={v.id} className="hover:bg-yellow-50/30 transition-colors group">
                       <td className="p-5">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-100 to-amber-100 flex items-center justify-center text-yellow-600 shadow-inner">
+                          <div className="w-12 h-12 rounded-xl bg-linear-to-br from-yellow-100 to-amber-100 flex items-center justify-center text-yellow-600 shadow-inner">
                             <FaTicketAlt />
                           </div>
                           <div>
@@ -264,7 +354,6 @@ export default function CRUDVoucher() {
                             <span>{v.used_count} used</span>
                             <span className="text-gray-400">/ {v.max_usage || '∞'}</span>
                           </div>
-                          {/* Simple Progress Bar */}
                           <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
                             <div
                               className={`h-full rounded-full ${v.used_count >= v.max_usage ? 'bg-red-500' : 'bg-yellow-500'}`}
@@ -278,12 +367,12 @@ export default function CRUDVoucher() {
                           <div className="flex items-center gap-2 mb-1">
                             <FaCalendarAlt className="text-gray-300 text-xs" />
                             <span className="font-medium text-xs">Start:</span>
-                            {new Date(v.valid_from).toLocaleDateString('id-ID')}
+                            {new Date(v.valid_from).toLocaleDateString()}
                           </div>
                           <div className="flex items-center gap-2 text-gray-400 text-xs">
                             <FaCalendarAlt className="text-gray-200 text-xs" />
                             <span>Until:</span>
-                            {new Date(v.valid_until).toLocaleDateString('id-ID')}
+                            {new Date(v.valid_until).toLocaleDateString()}
                           </div>
                         </div>
                       </td>
@@ -297,18 +386,10 @@ export default function CRUDVoucher() {
                       </td>
                       <td className="p-5 text-right">
                         <div className="flex justify-end gap-2 opacity-100 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => openEdit(v)}
-                            className="p-2 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors"
-                            title="Edit Voucher"
-                          >
+                          <button onClick={() => openEdit(v)} className="p-2 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors">
                             <FaEdit />
                           </button>
-                          <button
-                            onClick={() => handleDelete(v.id)}
-                            className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors"
-                            title="Delete Voucher"
-                          >
+                          <button onClick={() => handleDelete(v.id)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
                             <FaTrash />
                           </button>
                         </div>
@@ -322,10 +403,11 @@ export default function CRUDVoucher() {
         )}
       </div>
 
+      {/* Modal */}
       {openModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-slide-up">
-            <div className="bg-gradient-to-r from-yellow-400 to-amber-500 p-6 flex justify-between items-center">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[90vh] animate-slide-up">
+            <div className="bg-linear-to-r from-yellow-400 to-amber-500 p-6 flex justify-between items-center shrink-0 rounded-t-3xl">
               <h2 className="text-xl font-bold text-black">
                 {isEdit ? "Edit Voucher" : "Create New Voucher"}
               </h2>
@@ -334,74 +416,205 @@ export default function CRUDVoucher() {
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-8 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Input label="Voucher Code" name="code" value={form.code} onChange={handleChange} placeholder="e.g. SUMMER2024" required />
+            <div className="overflow-y-auto p-8 space-y-6 custom-scrollbar">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Input label="Voucher Code" name="code" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} placeholder="e.g. SUMMER2024" required />
 
-                <div className="flex flex-col">
-                  <label className="font-bold text-gray-700 mb-2 text-sm">Discount Type</label>
-                  <select
-                    name="discount_type"
-                    value={form.discount_type}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all outline-none"
-                    disabled={!isEdit} // as per original logic, though usually editable
-                  >
-                    <option value="percent">Percent (%)</option>
-                    <option value="fixed">Fixed Amount (Rp)</option>
-                  </select>
-                </div>
+                  <div className="flex flex-col">
+                    <label className="font-bold text-gray-700 mb-2 text-sm">Discount Type</label>
+                    <Select
+                      options={[
+                        { value: 'fixed', label: 'Fixed Amount (Rp)' },
+                        { value: 'percent', label: 'Percentage (%)' }
+                      ]}
+                      value={{ value: form.discount_type, label: form.discount_type === 'fixed' ? 'Fixed Amount (Rp)' : 'Percentage (%)' }}
+                      onChange={(opt) => setForm({ ...form, discount_type: opt.value })}
+                      styles={selectStyles}
+                    />
+                  </div>
 
-                <Input label="Discount Value" name="discount_value" value={form.discount_value} onChange={handleChange} type="number" required />
-                <Input label="Minimum Order (Rp)" name="min_order_value" value={form.min_order_value} onChange={handleChange} type="number" />
-
-                <Input label="Max Usage Limit" name="max_usage" value={form.max_usage} onChange={handleChange} type="number" />
-
-                <div className="flex flex-col">
-                  <label className="font-bold text-gray-700 mb-2 text-sm">Status</label>
-                  <select
-                    name="is_active"
-                    value={form.is_active}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all outline-none"
-                  >
-                    <option value={1}>Active</option>
-                    <option value={0}>Inactive</option>
-                  </select>
-                </div>
-
-                <Input label="Valid From" type="datetime-local" name="valid_from" value={form.valid_from} onChange={handleChange} required />
-                <Input label="Valid Until" type="datetime-local" name="valid_until" value={form.valid_until} onChange={handleChange} required />
-
-                <div className="flex flex-col md:col-span-2">
-                  <label className="font-bold text-gray-700 mb-2 text-sm">Voucher Type (Product/Event)</label>
-                  <input
-                    type="text"
-                    name="voucher_type"
-                    value={form.voucher_type}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all outline-none"
-                    disabled={!isEdit} // original logic disabled this for some reason
+                  <Input
+                    label="Discount Value *"
+                    name="discount_value"
+                    type="number"
+                    value={form.discount_value}
+                    onChange={(e) => setForm({ ...form, discount_value: e.target.value })}
+                    required
                   />
-                </div>
-              </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-                <button
-                  type="button"
-                  onClick={() => setOpenModal(false)}
-                  className="px-6 py-3 rounded-xl font-bold text-gray-600 bg-gray-100 hover:bg-gray-200 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-3 rounded-xl font-bold text-black bg-gradient-to-r from-yellow-400 to-amber-500 hover:shadow-lg hover:scale-[1.02] transition-all"
-                >
-                  {isEdit ? "Save Changes" : "Create Voucher"}
-                </button>
-              </div>
-            </form>
+                  <Input
+                    label="Minimum Order (Rp)"
+                    name="min_order_value"
+                    type="number"
+                    value={form.min_order_value}
+                    onChange={(e) => setForm({ ...form, min_order_value: e.target.value })}
+                  />
+
+                  <Input
+                    label="Max Usage Limit"
+                    name="max_usage"
+                    type="number"
+                    value={form.max_usage}
+                    onChange={(e) => setForm({ ...form, max_usage: e.target.value })}
+                    placeholder="0 for unlimited"
+                  />
+
+                  <div className="flex flex-col">
+                    <label className="font-bold text-gray-700 mb-2 text-sm">Status</label>
+                    <Select
+                      options={[
+                        { value: 1, label: 'Active' },
+                        { value: 0, label: 'Inactive' }
+                      ]}
+                      value={{ value: form.is_active, label: form.is_active === 1 ? 'Active' : 'Inactive' }}
+                      onChange={(opt) => setForm({ ...form, is_active: opt.value })}
+                      styles={selectStyles}
+                    />
+                  </div>
+                </div>
+
+                {/* Date Selection - Split for precise time control */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex flex-col z-20">
+                    <label className="font-bold text-gray-700 mb-2 text-sm">Valid From *</label>
+                    <DatePicker
+                      selected={form.valid_from}
+                      onChange={(date) => setForm({ ...form, valid_from: date })}
+                      showTimeSelect
+                      dateFormat="Pp"
+                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:border-yellow-400 outline-none"
+                      placeholderText="Select Start Date & Time"
+                      wrapperClassName="w-full"
+                    />
+                  </div>
+                  <div className="flex flex-col z-20">
+                    <label className="font-bold text-gray-700 mb-2 text-sm">Valid Until *</label>
+                    <DatePicker
+                      selected={form.valid_until}
+                      onChange={(date) => setForm({ ...form, valid_until: date })}
+                      showTimeSelect
+                      dateFormat="Pp"
+                      className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:border-yellow-400 outline-none"
+                      placeholderText="Select End Date & Time"
+                      minDate={form.valid_from}
+                      wrapperClassName="w-full"
+                    />
+                  </div>
+                </div>
+
+                {/* VOUCHER SCOPING SECTION */}
+                <div className="border-t border-gray-100 pt-6 mt-6">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4 bg-yellow-50 inline-block px-3 py-1 rounded-lg">
+                    Voucher Scope
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    {/* Voucher Type */}
+                    <div className="flex flex-col">
+                      <label className="font-bold text-gray-700 mb-2 text-sm">Voucher Type</label>
+                      <Select
+                        options={[
+                          { value: "general", label: "General (All Types)" },
+                          { value: "product", label: "Product Voucher" },
+                          { value: "event", label: "Event Voucher" },
+                          { value: "shipping", label: "Shipping Voucher" }
+                        ]}
+                        value={form.voucher_type}
+                        onChange={(opt) => setForm({ ...form, voucher_type: opt })}
+                        styles={selectStyles}
+                      />
+                    </div>
+
+                    {/* Apply To (Radio) */}
+                    <div className="flex flex-col">
+                      <label className="font-bold text-gray-700 mb-2 text-sm">Apply To</label>
+                      <div className="flex items-center gap-6 mt-3">
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <input
+                            type="radio"
+                            checked={form.apply_to_all}
+                            onChange={() => setForm({ ...form, apply_to_all: true, selected_items: [] })}
+                            className="w-5 h-5 text-yellow-500 focus:ring-yellow-400 border-gray-300"
+                          />
+                          <span className={`${form.apply_to_all ? 'font-bold text-gray-900' : 'text-gray-500'}`}>
+                            {form.voucher_type.value === 'general' ? 'All Items' :
+                              form.voucher_type.value === 'event' ? 'All Events' : 'All Products'}
+                          </span>
+                        </label>
+
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <input
+                            type="radio"
+                            checked={!form.apply_to_all}
+                            onChange={() => setForm({ ...form, apply_to_all: false })}
+                            className="w-5 h-5 text-yellow-500 focus:ring-yellow-400 border-gray-300"
+                          />
+                          <span className={`${!form.apply_to_all ? 'font-bold text-gray-900' : 'text-gray-500'}`}>Specific Items</span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ITEM SELECTION (React Select Multi) */}
+                  {!form.apply_to_all && (
+                    <div className="space-y-4 animate-fade-in">
+                      {/* Show Product Select if General or Product type */}
+                      {(form.voucher_type.value === 'general' || form.voucher_type.value === 'product') && (
+                        <div>
+                          <label className="font-bold text-gray-700 mb-2 text-sm block">Select Specific Products</label>
+                          <Select
+                            isMulti
+                            options={productOptions}
+                            value={form.selected_products}
+                            onChange={(vals) => setForm({ ...form, selected_products: vals })}
+                            styles={selectStyles}
+                            placeholder="Search and select products..."
+                            noOptionsMessage={() => loadingItems ? "Loading products..." : "No products found"}
+                          />
+                        </div>
+                      )}
+
+                      {/* Show Event Select if General or Event type */}
+                      {(form.voucher_type.value === 'general' || form.voucher_type.value === 'event') && (
+                        <div>
+                          <label className="font-bold text-gray-700 mb-2 text-sm block">Select Specific Events</label>
+                          <Select
+                            isMulti
+                            options={eventOptions}
+                            value={form.selected_events}
+                            onChange={(vals) => setForm({ ...form, selected_events: vals })}
+                            styles={selectStyles}
+                            placeholder="Search and select events..."
+                            noOptionsMessage={() => loadingItems ? "Loading events..." : "No events found"}
+                          />
+                        </div>
+                      )}
+
+                      <p className="text-xs text-gray-400 mt-2">
+                        {form.selected_products?.length || 0} products and {form.selected_events?.length || 0} events selected
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-6 flex justify-end gap-3 sticky bottom-0 bg-white/95 backdrop-blur-sm border-t border-gray-100 pb-2">
+                  <button
+                    type="button"
+                    onClick={() => setOpenModal(false)}
+                    className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-linear-to-r from-yellow-400 to-amber-500 text-black px-8 py-3 rounded-xl font-bold hover:shadow-lg hover:scale-105 transition-all"
+                  >
+                    {isEdit ? "Update Voucher" : "Create Voucher"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
@@ -409,7 +622,6 @@ export default function CRUDVoucher() {
   );
 }
 
-// Reusable Input Component
 function Input({ label, name, value, onChange, type = "text", placeholder, required }) {
   return (
     <div className="flex flex-col">

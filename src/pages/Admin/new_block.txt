@@ -1,0 +1,143 @@
+                {!form.apply_to_all && (
+                  <div className="flex flex-col md:col-span-2">
+                    <div className="max-h-64 overflow-y-auto bg-gray-50 p-3 rounded-xl border border-gray-200">
+                      {loadingItems ? (
+                        <div className="text-center text-gray-500 py-4">Loading...</div>
+                      ) : (
+                        <div className="space-y-4">
+                          {(form.voucher_type === 'product' || form.voucher_type === 'general') && (
+                            <div>
+                               <label className="font-bold text-gray-700 mb-2 text-sm block sticky top-0 bg-gray-50 pb-1 z-10">Select Products</label>
+                               {products.length === 0 ? (
+                                 <div className="text-center text-gray-500 py-2">No products available</div>
+                               ) : (
+                                 <div className="space-y-2">
+                                   {products.map((product) => (
+                                     <label
+                                       key={product.id}
+                                       className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+                                         form.product_ids.includes(product.id)
+                                           ? 'bg-yellow-50 border-2 border-yellow-400 shadow-sm'
+                                           : 'bg-white border border-gray-200 hover:border-yellow-300 hover:shadow-sm'
+                                       }`}
+                                     >
+                                       <div className="shrink-0">
+                                         <input
+                                           type="checkbox"
+                                           checked={form.product_ids.includes(product.id)}
+                                           onChange={(e) => {
+                                             if (e.target.checked) {
+                                               setForm({ ...form, product_ids: [...form.product_ids, product.id] });
+                                             } else {
+                                               setForm({ ...form, product_ids: form.product_ids.filter(id => id !== product.id) });
+                                             }
+                                           }}
+                                           className="w-4 h-4 text-yellow-500 rounded border-gray-300 focus:ring-yellow-400"
+                                         />
+                                       </div>
+                                       <div className="flex-1 min-w-0">
+                                         <p className="font-semibold text-gray-900 text-sm">{product.name}</p>
+                                         <div className="flex flex-wrap gap-2 mt-1">
+                                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                             Rp {Number(product.price || 0).toLocaleString()}
+                                           </span>
+                                           {product.category && (
+                                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                               {product.category}
+                                             </span>
+                                           )}
+                                           {product.size && (
+                                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                               Size: {product.size}
+                                             </span>
+                                           )}
+                                         </div>
+                                       </div>
+                                       {form.product_ids.includes(product.id) && (
+                                         <span className="text-yellow-500 text-lg flex-shrink-0">✓</span>
+                                       )}
+                                     </label>
+                                   ))}
+                                 </div>
+                               )}
+                            </div>
+                          )}
+
+                          {form.voucher_type === 'general' && <hr className="border-gray-200" />}
+
+                          {(form.voucher_type === 'event' || form.voucher_type === 'general') && (
+                            <div>
+                               <label className="font-bold text-gray-700 mb-2 text-sm block sticky top-0 bg-gray-50 pb-1 z-10">Select Events</label>
+                               {events.length === 0 ? (
+                                 <div className="text-center text-gray-500 py-2">No events available</div>
+                               ) : (
+                                 <div className="space-y-2">
+                                   {events.map((event) => (
+                                     <label
+                                       key={event.id}
+                                       className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all ${
+                                         form.event_ids.includes(event.id)
+                                           ? 'bg-yellow-50 border-2 border-yellow-400 shadow-sm'
+                                           : 'bg-white border border-gray-200 hover:border-yellow-300 hover:shadow-sm'
+                                       }`}
+                                     >
+                                       <div className="shrink-0">
+                                         <input
+                                           type="checkbox"
+                                           checked={form.event_ids.includes(event.id)}
+                                           onChange={(e) => {
+                                             if (e.target.checked) {
+                                               setForm({ ...form, event_ids: [...form.event_ids, event.id] });
+                                             } else {
+                                               setForm({ ...form, event_ids: form.event_ids.filter(id => id !== event.id) });
+                                             }
+                                           }}
+                                           className="w-4 h-4 text-yellow-500 rounded border-gray-300 focus:ring-yellow-400"
+                                         />
+                                       </div>
+                                       <div className="flex-1 min-w-0">
+                                         <p className="font-semibold text-gray-900 text-sm">{event.title}</p>
+                                         <div className="flex flex-wrap gap-2 mt-1">
+                                           <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                             Rp {Number(event.price || 0).toLocaleString()}
+                                           </span>
+                                           {event.start_date && (
+                                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                               {new Date(event.start_date).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                             </span>
+                                           )}
+                                           {event.location && (
+                                             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                               📍 {event.location}
+                                             </span>
+                                           )}
+                                         </div>
+                                       </div>
+                                       {form.event_ids.includes(event.id) && (
+                                         <span className="text-yellow-500 text-lg shrink-0">✓</span>
+                                       )}
+                                     </label>
+                                   ))}
+                                 </div>
+                               )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center mt-2">
+                      <p className="text-xs text-gray-500">
+                        Selected: {form.product_ids.length + form.event_ids.length} items
+                      </p>
+                      {(form.product_ids.length > 0 || form.event_ids.length > 0) && (
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, product_ids: [], event_ids: [] })}
+                          className="text-xs text-red-500 hover:text-red-700 font-medium"
+                        >
+                          Clear Selection
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}

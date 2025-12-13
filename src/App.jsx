@@ -1,4 +1,5 @@
 import { Routes, Route, useEffect } from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute";
 import useAppStore from "./stores/useAppStore";
 
 // User Layout Components
@@ -131,7 +132,11 @@ export default function App() {
                   />
                   <Route
                     path="/ejpeace/checkout-form"
-                    element={<CheckoutPage />}
+                    element={
+                      <ProtectedRoute>
+                        <CheckoutPage />
+                      </ProtectedRoute>
+                    }
                   />
                   <Route
                     path="/ejpeace/store/success"
