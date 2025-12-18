@@ -11,7 +11,7 @@ export default function Header() {
           className="text-2xl font-bold cursor-pointer"
           onClick={() => navigate("/ejpeace")}
         >
-          PEACETIFAL
+          eJPeace
         </div>
 
         <nav className="hidden md:flex space-x-8">

@@ -35,10 +35,10 @@ export default function AdminSidebar({ mobileOpen, setMobileOpen }) {
         {/* Header */}
         <div className="p-6 flex items-center justify-between border-b border-gray-800 bg-[#0f1523]">
           <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-lg bg-yellow-500 flex items-center justify-center text-black font-bold text-xl">
-               P
-             </div>
-             <span className="font-bold text-xl text-white tracking-wide">Peacetifal</span>
+            <div className="w-8 h-8 rounded-lg bg-yellow-500 flex items-center justify-center text-black font-bold text-xl">
+              P
+            </div>
+            <span className="font-bold text-xl text-white tracking-wide">eJPeace</span>
           </div>
           {/* Mobile close */}
           <button
@@ -52,7 +52,7 @@ export default function AdminSidebar({ mobileOpen, setMobileOpen }) {
         {/* Navigation */}
         <nav className="mt-6 flex flex-col gap-2 flex-grow overflow-y-auto px-4 pb-4">
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 px-2">Main Menu</p>
-          
+
           <SidebarLink
             label="Home"
             icon={<FiHome />}
@@ -71,12 +71,11 @@ export default function AdminSidebar({ mobileOpen, setMobileOpen }) {
             <button
               onClick={() => setProductDropdown(!productDropdown)}
               className={`w-full flex justify-between items-center py-3 px-4 rounded-xl transition-all duration-200 group
-                ${
-                  pathname.includes("admin-products") ||
+                ${pathname.includes("admin-products") ||
                   pathname.includes("edit-product") ||
                   pathname.includes("create-product")
-                    ? "bg-gray-800 text-white"
-                    : "hover:bg-gray-800/50 hover:text-white"
+                  ? "bg-gray-800 text-white"
+                  : "hover:bg-gray-800/50 hover:text-white"
                 }
               `}
             >
@@ -88,9 +87,8 @@ export default function AdminSidebar({ mobileOpen, setMobileOpen }) {
             </button>
 
             <div
-              className={`overflow-hidden transition-all duration-300 ${
-                productDropdown ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0"
-              } ml-4 border-l border-gray-700 pl-2 space-y-1`}
+              className={`overflow-hidden transition-all duration-300 ${productDropdown ? "max-h-40 opacity-100 mt-1" : "max-h-0 opacity-0"
+                } ml-4 border-l border-gray-700 pl-2 space-y-1`}
             >
               <SidebarLink
                 label="List Product"
@@ -119,9 +117,9 @@ export default function AdminSidebar({ mobileOpen, setMobileOpen }) {
             to="/ejpeace/internal/users"
             active={pathname === "/ejpeace/internal/users"}
           />
-          
+
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-6 mb-2 px-2">Content</p>
-          
+
           <SidebarLink
             label="Events"
             icon={<FaTicketAlt />}
@@ -156,8 +154,8 @@ function SidebarLink({ label, icon, to, active, isSubItem }) {
       <Link
         to={to}
         className={`block py-2 px-4 rounded-lg transition-all text-sm
-          ${active 
-            ? "text-yellow-400 font-medium bg-gray-800/50 translate-x-1" 
+          ${active
+            ? "text-yellow-400 font-medium bg-gray-800/50 translate-x-1"
             : "text-gray-400 hover:text-white hover:translate-x-1"
           }
         `}
@@ -171,8 +169,8 @@ function SidebarLink({ label, icon, to, active, isSubItem }) {
     <Link
       to={to}
       className={`flex items-center gap-3 py-3 px-4 rounded-xl transition-all duration-200 group
-        ${active 
-          ? "bg-yellow-500 text-black shadow-lg shadow-yellow-500/20 font-bold" 
+        ${active
+          ? "bg-yellow-500 text-black shadow-lg shadow-yellow-500/20 font-bold"
           : "hover:bg-gray-800 hover:text-white"
         }
       `}

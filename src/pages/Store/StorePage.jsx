@@ -144,12 +144,35 @@ export default function StorePage() {
                   <div className="p-4 flex flex-col flex-1">
                     <h2 className="font-semibold text-sm">{p.name}</h2>
                     <p className="text-xs text-gray-600">{p.category}</p>
-                    <p className="text-xs text-gray-600">
-                      {Number(p.price).toLocaleString("id-ID", {
-                        currency: "IDR",
-                        style: "currency",
-                      })}
-                    </p>
+                    {/* Price Display with Discount */}
+                    {p.discount_percentage > 0 ? (
+                      <div className="flex flex-col">
+                        <span className="text-xs text-gray-400 line-through">
+                          {Number(p.price).toLocaleString("id-ID", {
+                            currency: "IDR",
+                            style: "currency",
+                          })}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-bold text-red-600">
+                            {Number(p.price * (1 - p.discount_percentage / 100)).toLocaleString("id-ID", {
+                              currency: "IDR",
+                              style: "currency",
+                            })}
+                          </span>
+                          <span className="text-xs bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-semibold">
+                            -{p.discount_percentage}%
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-600">
+                        {Number(p.price).toLocaleString("id-ID", {
+                          currency: "IDR",
+                          style: "currency",
+                        })}
+                      </p>
+                    )}
 
                     <div className="flex justify-between items-center mt-2">
                       <p className="text-xs text-gray-600">

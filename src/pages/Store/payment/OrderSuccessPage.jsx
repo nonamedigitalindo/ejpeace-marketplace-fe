@@ -235,7 +235,7 @@ export default function OrderSuccessPage() {
 
       <footer className="w-full py-6 bg-black text-center text-white">
         <p className="text-sm">
-          © {new Date().getFullYear()} Peacetival. All rights reserved.
+          © {new Date().getFullYear()} eJPeace. All rights reserved.
         </p>
       </footer>
     </div>

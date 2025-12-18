@@ -54,6 +54,7 @@ export default function AdminEvents() {
     end_date: "",
     images: [], // Changed to array for multiple images
     existingImages: [], // Track existing images
+    deletedImages: [], // Track images to be deleted
   };
 
   const [addForm, setAddForm] = useState(emptyForm);
@@ -150,6 +151,7 @@ export default function AdminEvents() {
         end_date: utcToLocalInput(data.end_date),
         images: [],
         existingImages: existingImages,
+        deletedImages: [], // Reset deleted images
       });
 
       setOpenEdit(true);
@@ -181,7 +183,12 @@ export default function AdminEvents() {
 
   // Remove existing image
   const removeExistingImage = (index) => {
-    setEditForm(prev => ({ ...prev, existingImages: prev.existingImages.filter((_, i) => i !== index) }));
+    const imageToDelete = editForm.existingImages[index];
+    setEditForm(prev => ({
+      ...prev,
+      existingImages: prev.existingImages.filter((_, i) => i !== index),
+      deletedImages: [...prev.deletedImages, imageToDelete]
+    }));
   };
 
   // DELETE EVENT
@@ -306,6 +313,20 @@ export default function AdminEvents() {
 
       // Keep existing images
       fd.append("existingImages", JSON.stringify(cleanedImages));
+
+      // Send deleted images for backend to remove from database
+      if (editForm.deletedImages && editForm.deletedImages.length > 0) {
+        const cleanedDeletedImages = editForm.deletedImages.map(img => {
+          return typeof img === 'string'
+            ? img.replace('http://localhost:3000', '')
+              .replace('http://localhost:4000', '')
+              .replace('http://212.85.27.163', '')
+              .replace(/^https?:\/\/[^\/]+/, '')
+            : img;
+        });
+        fd.append("deletedImages", JSON.stringify(cleanedDeletedImages));
+        console.log("Images to delete:", cleanedDeletedImages);
+      }
 
       // Append new images using 'image' key
       if (editForm.images.length > 0) {
@@ -537,7 +558,7 @@ export default function AdminEvents() {
                 }
                 required
                 placeholder="e.g. Jakarta Convention Center"
-                icon={<FaMapMarkerAlt className="text-gray-400" />}
+              // icon={<FaMapMarkerAlt className="text-gray-400" />}
               />
             </div>
 

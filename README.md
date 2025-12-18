@@ -1,6 +1,6 @@
-# PEACETIFAL
+# eJPeace
 
-Dokumentasi tentang aplikasi PEACETIFAL. Tolong diperhatikan dengan seksama yaa..
+Dokumentasi tentang aplikasi eJPeace. Tolong diperhatikan dengan seksama yaa..
 
 ## Cara Initiate Project
 

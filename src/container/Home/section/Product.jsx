@@ -48,7 +48,7 @@ export default function ProductSection() {
   return (
     <section className="py-12">
       <div className="max-w-7xl mx-auto px-4">
-        
+
         {/* TITLE */}
         <h2 className="text-2xl font-bold mb-6 text-center">
           Latest Products
@@ -72,9 +72,8 @@ export default function ProductSection() {
               {products.map((p, index) => (
                 <div
                   key={p.id}
-                  className={`transition-opacity duration-300 ${
-                    index === visibleIndex ? "opacity-100" : "hidden lg:block lg:opacity-40"
-                  }`}
+                  className={`transition-opacity duration-300 ${index === visibleIndex ? "opacity-100" : "hidden lg:block lg:opacity-40"
+                    }`}
                 >
                   <Link
                     to={`/ejpeace/store/product/${p.id}`}
@@ -93,12 +92,35 @@ export default function ProductSection() {
 
                     <div className="p-3">
                       <h3 className="text-sm font-semibold truncate">{p.name}</h3>
-                      <p className="text-xs text-gray-600">
-                        {Number(p.price).toLocaleString("id-ID", {
-                          style: "currency",
-                          currency: "IDR",
-                        })}
-                      </p>
+                      {/* Price Display with Discount */}
+                      {p.discount_percentage > 0 ? (
+                        <div className="flex flex-col">
+                          <span className="text-xs text-gray-400 line-through">
+                            {Number(p.price).toLocaleString("id-ID", {
+                              style: "currency",
+                              currency: "IDR",
+                            })}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-bold text-red-600">
+                              {Number(p.price * (1 - p.discount_percentage / 100)).toLocaleString("id-ID", {
+                                style: "currency",
+                                currency: "IDR",
+                              })}
+                            </span>
+                            <span className="text-[10px] bg-red-100 text-red-600 px-1 rounded font-semibold">
+                              -{p.discount_percentage}%
+                            </span>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-600">
+                          {Number(p.price).toLocaleString("id-ID", {
+                            style: "currency",
+                            currency: "IDR",
+                          })}
+                        </p>
+                      )}
                     </div>
                   </Link>
                 </div>

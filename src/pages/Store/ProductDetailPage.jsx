@@ -104,6 +104,16 @@ export default function ProductDetailPage() {
   };
 
   // ============================================================
+  // HELPER: Price with Discount (moved up for use in handlers)
+  // ============================================================
+  const originalPrice = Number(product?.price || 0);
+  const discountPercentage = Number(product?.discount_percentage || 0);
+  const hasDiscount = discountPercentage > 0;
+  const discountedPrice = hasDiscount
+    ? originalPrice * (1 - discountPercentage / 100)
+    : originalPrice;
+
+  // ============================================================
   // ADD TO CART
   // ============================================================
   const handleAddToCart = async () => {
@@ -157,7 +167,9 @@ export default function ProductDetailPage() {
     const buyNowItem = {
       id: product.id,
       name: product.name,
-      price: product.price,
+      price: discountedPrice, // Use discounted price
+      originalPrice: originalPrice,
+      discount_percentage: discountPercentage,
       image:
         product.images?.length > 0 ? product.images[0] : product.image,
       qty: quantity,
@@ -198,14 +210,17 @@ export default function ProductDetailPage() {
   }
 
   // ============================================================
-  // HELPER: Price
+  // HELPER: Formatted Prices for Display
   // ============================================================
-  const formattedPrice =
-    product.price_formatted ||
-    Number(product.price || 0).toLocaleString("id-ID", {
-      style: "currency",
-      currency: "IDR",
-    });
+  const formattedOriginalPrice = originalPrice.toLocaleString("id-ID", {
+    style: "currency",
+    currency: "IDR",
+  });
+
+  const formattedDiscountedPrice = discountedPrice.toLocaleString("id-ID", {
+    style: "currency",
+    currency: "IDR",
+  });
 
   // ============================================================
   // MAIN UI
@@ -213,7 +228,7 @@ export default function ProductDetailPage() {
   return (
     <div className="pt-20 min-h-screen">
       <div className="max-w-6xl mx-auto px-6 flex flex-col gap-y-3">
-        
+
         {/* BACK BUTTON */}
         <section className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 flex items-center justify-between">
           <button
@@ -260,11 +275,10 @@ export default function ProductDetailPage() {
                   <button
                     key={idx}
                     onClick={() => setSelectedImage(img)}
-                    className={`w-16 h-16 rounded border-2 ${
-                      img === selectedImage
-                        ? "border-blue-500"
-                        : "border-gray-200"
-                    }`}
+                    className={`w-16 h-16 rounded border-2 ${img === selectedImage
+                      ? "border-blue-500"
+                      : "border-gray-200"
+                      }`}
                   >
                     <img
                       src={resolveImageSrc(img)}
@@ -280,12 +294,29 @@ export default function ProductDetailPage() {
           {/* DETAILS */}
           <div className="flex flex-col gap-y-3">
             <h1 className="text-3xl font-bold">{product.name}</h1>
-            
+
             {product.description && (
               <p className="text-gray-600">{product.description}</p>
             )}
 
-            <span className="text-2xl font-bold">{formattedPrice}</span>
+            {/* Price Display with Discount */}
+            {hasDiscount ? (
+              <div className="flex flex-col gap-1">
+                <span className="text-lg text-gray-400 line-through">
+                  {formattedOriginalPrice}
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl font-bold text-red-600">
+                    {formattedDiscountedPrice}
+                  </span>
+                  <span className="bg-red-100 text-red-600 px-2 py-1 rounded-lg font-bold text-sm">
+                    DISKON {discountPercentage}%
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <span className="text-2xl font-bold">{formattedDiscountedPrice}</span>
+            )}
 
             {/* Stock Indicator */}
             <StockIndicator quantity={product.quantity} />
@@ -297,11 +328,10 @@ export default function ProductDetailPage() {
                 <button
                   onClick={() => handleQuantityChange(quantity - 1)}
                   disabled={quantity <= 1}
-                  className={`px-3 py-2 rounded-l ${
-                    quantity <= 1
-                      ? "bg-gray-100 cursor-not-allowed"
-                      : "bg-gray-200 hover:bg-gray-300"
-                  }`}
+                  className={`px-3 py-2 rounded-l ${quantity <= 1
+                    ? "bg-gray-100 cursor-not-allowed"
+                    : "bg-gray-200 hover:bg-gray-300"
+                    }`}
                 >
                   -
                 </button>
@@ -311,11 +341,10 @@ export default function ProductDetailPage() {
                 <button
                   onClick={() => handleQuantityChange(quantity + 1)}
                   disabled={quantity >= (product.quantity || 0)}
-                  className={`px-3 py-2 rounded-r ${
-                    quantity >= (product.quantity || 0)
-                      ? "bg-gray-100 cursor-not-allowed"
-                      : "bg-gray-200 hover:bg-gray-300"
-                  }`}
+                  className={`px-3 py-2 rounded-r ${quantity >= (product.quantity || 0)
+                    ? "bg-gray-100 cursor-not-allowed"
+                    : "bg-gray-200 hover:bg-gray-300"
+                    }`}
                 >
                   +
                 </button>
@@ -330,11 +359,10 @@ export default function ProductDetailPage() {
               <button
                 onClick={handleAddToCart}
                 disabled={!product.quantity || product.quantity === 0}
-                className={`flex-1 py-3 rounded-lg transition ${
-                  !product.quantity || product.quantity === 0
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-black text-white hover:bg-gray-800"
-                }`}
+                className={`flex-1 py-3 rounded-lg transition ${!product.quantity || product.quantity === 0
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-black text-white hover:bg-gray-800"
+                  }`}
               >
                 {!product.quantity || product.quantity === 0
                   ? "Out of Stock"
@@ -346,17 +374,16 @@ export default function ProductDetailPage() {
                 disabled={
                   isProcessing || !product.quantity || product.quantity === 0
                 }
-                className={`flex-1 py-3 rounded-lg transition ${
-                  isProcessing || !product.quantity || product.quantity === 0
-                    ? "bg-gray-400 cursor-not-allowed"
-                    : "bg-yellow-400 text-black hover:bg-yellow-500"
-                }`}
+                className={`flex-1 py-3 rounded-lg transition ${isProcessing || !product.quantity || product.quantity === 0
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-yellow-400 text-black hover:bg-yellow-500"
+                  }`}
               >
                 {isProcessing
                   ? "Processing..."
                   : !product.quantity || product.quantity === 0
-                  ? "Out of Stock"
-                  : "Buy Now"}
+                    ? "Out of Stock"
+                    : "Buy Now"}
               </button>
             </div>
           </div>

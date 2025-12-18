@@ -175,19 +175,32 @@ export default function ProductForm({ initialData = {}, isEdit = false, onSubmit
     const handleFileSelect = async (e) => {
         const files = Array.from(e.target.files || []);
 
-        // Compress all images before adding
-        const compressedItems = await Promise.all(
-            files.map(async (file) => {
+        if (files.length === 0) return;
+
+        console.log(`Processing ${files.length} files...`);
+
+        // Process files sequentially to avoid race conditions
+        const compressedItems = [];
+        for (const file of files) {
+            try {
                 const compressedFile = await compressImage(file);
-                return {
+                compressedItems.push({
                     type: 'new',
                     src: URL.createObjectURL(compressedFile),
                     file: compressedFile
-                };
-            })
-        );
+                });
+                console.log(`Processed: ${file.name}`);
+            } catch (err) {
+                console.error(`Failed to process ${file.name}:`, err);
+            }
+        }
 
-        setImages(prev => [...prev, ...compressedItems]);
+        // Add all compressed items at once
+        if (compressedItems.length > 0) {
+            setImages(prevImages => [...prevImages, ...compressedItems]);
+            console.log(`Added ${compressedItems.length} images, total now: ${compressedItems.length}`);
+        }
+
         e.target.value = '';
     };
 
