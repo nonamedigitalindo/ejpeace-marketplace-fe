@@ -7,10 +7,23 @@ export default function OrderHistorySection({ orders }) {
   const [currentPage, setCurrentPage] = useState(1);
   const ordersPerPage = 5; // Number of orders per page
 
-  // Ensure orders is an array and filter for paid status only
+  // Ensure orders is an array and filter for completed/paid status
+  const paidStatuses = ["paid", "completed", "settled", "success"];
+
+  // Debug logs
+  console.log("OrderHistorySection received orders:", orders);
+  console.log("Orders is array:", Array.isArray(orders));
+
   const ordersArray = Array.isArray(orders)
-    ? orders.filter((order) => order.status?.toLowerCase() === "paid")
+    ? orders.filter((order) => {
+      const status = order.status?.toLowerCase();
+      const isIncluded = paidStatuses.includes(status);
+      console.log(`Order ${order.id} status: ${status}, included: ${isIncluded}`);
+      return isIncluded;
+    })
     : [];
+
+  console.log("Filtered ordersArray:", ordersArray);
 
   // Filter orders
   const filteredOrders = ordersArray.filter((order) => {
@@ -105,31 +118,28 @@ export default function OrderHistorySection({ orders }) {
         <div className="flex gap-2">
           <button
             onClick={() => setFilter("all")}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              filter === "all"
-                ? "bg-black text-white"
-                : "bg-gray-100 hover:bg-gray-200"
-            }`}
+            className={`px-4 py-2 rounded-lg font-medium transition ${filter === "all"
+              ? "bg-black text-white"
+              : "bg-gray-100 hover:bg-gray-200"
+              }`}
           >
             All ({ordersArray.length})
           </button>
           <button
             onClick={() => setFilter("products")}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              filter === "products"
-                ? "bg-black text-white"
-                : "bg-gray-100 hover:bg-gray-200"
-            }`}
+            className={`px-4 py-2 rounded-lg font-medium transition ${filter === "products"
+              ? "bg-black text-white"
+              : "bg-gray-100 hover:bg-gray-200"
+              }`}
           >
             Products
           </button>
           <button
             onClick={() => setFilter("events")}
-            className={`px-4 py-2 rounded-lg font-medium transition ${
-              filter === "events"
-                ? "bg-black text-white"
-                : "bg-gray-100 hover:bg-gray-200"
-            }`}
+            className={`px-4 py-2 rounded-lg font-medium transition ${filter === "events"
+              ? "bg-black text-white"
+              : "bg-gray-100 hover:bg-gray-200"
+              }`}
           >
             Events
           </button>
@@ -172,11 +182,10 @@ export default function OrderHistorySection({ orders }) {
             <button
               onClick={handlePreviousPage}
               disabled={currentPage === 1}
-              className={`px-4 py-2 rounded-lg ${
-                currentPage === 1
-                  ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                  : "bg-gray-100 hover:bg-gray-200"
-              }`}
+              className={`px-4 py-2 rounded-lg ${currentPage === 1
+                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                : "bg-gray-100 hover:bg-gray-200"
+                }`}
             >
               Previous
             </button>
@@ -194,11 +203,10 @@ export default function OrderHistorySection({ orders }) {
                   <button
                     key={pageNumber}
                     onClick={() => handlePageChange(pageNumber)}
-                    className={`px-4 py-2 rounded-lg ${
-                      currentPage === pageNumber
-                        ? "bg-black text-white"
-                        : "bg-gray-100 hover:bg-gray-200"
-                    }`}
+                    className={`px-4 py-2 rounded-lg ${currentPage === pageNumber
+                      ? "bg-black text-white"
+                      : "bg-gray-100 hover:bg-gray-200"
+                      }`}
                   >
                     {pageNumber}
                   </button>
@@ -223,11 +231,10 @@ export default function OrderHistorySection({ orders }) {
             <button
               onClick={handleNextPage}
               disabled={currentPage === totalPages}
-              className={`px-4 py-2 rounded-lg ${
-                currentPage === totalPages
-                  ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                  : "bg-gray-100 hover:bg-gray-200"
-              }`}
+              className={`px-4 py-2 rounded-lg ${currentPage === totalPages
+                ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                : "bg-gray-100 hover:bg-gray-200"
+                }`}
             >
               Next
             </button>

@@ -280,10 +280,11 @@ export default function AdminOrders() {
           {/* Desktop Header */}
           <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-4 bg-yellow-50/80 rounded-2xl text-xs font-bold text-gray-500 uppercase tracking-wider border border-yellow-100 mb-2">
             <div className="col-span-1">ID</div>
-            <div className="col-span-4">Customer Info</div>
+            <div className="col-span-3">Customer Info</div>
+            <div className="col-span-3">Products</div>
             <div className="col-span-2 text-right">Amount</div>
-            <div className="col-span-3 text-center">Status</div>
-            <div className="col-span-2 text-center">Date</div>
+            <div className="col-span-2 text-center">Status</div>
+            <div className="col-span-1 text-center">Date</div>
           </div>
 
           {filteredOrders.length === 0 ? (
@@ -293,36 +294,60 @@ export default function AdminOrders() {
               <p className="text-gray-400 text-sm">Try adjusting your filters or search.</p>
             </div>
           ) : (
-            filteredOrders.map((order) => (
-              <div key={order.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center p-4 bg-white rounded-2xl shadow-sm hover:shadow-md border border-gray-100 transition-all duration-200 group">
-                <div className="col-span-1 font-mono text-xs text-gray-400">#{order.id}</div>
+            filteredOrders.map((order) => {
+              // Extract product names from order details
+              const getProductNames = () => {
+                if (order.type === 'ticket' && order.details) {
+                  return order.details.event_name || 'Event Ticket';
+                }
+                if (order.details?.items && order.details.items.length > 0) {
+                  return order.details.items.map(item =>
+                    `${item.product_name} (x${item.quantity})`
+                  ).join(', ');
+                }
+                return '-';
+              };
 
-                <div className="col-span-4 flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center text-yellow-600 font-bold shadow-sm border border-yellow-100">
-                    <FaEnvelope />
+              return (
+                <div key={order.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center p-4 bg-white rounded-2xl shadow-sm hover:shadow-md border border-gray-100 transition-all duration-200 group">
+                  <div className="col-span-1 font-mono text-xs text-gray-400">#{order.id}</div>
+
+                  <div className="col-span-3 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-yellow-50 flex items-center justify-center text-yellow-600 font-bold shadow-sm border border-yellow-100">
+                      <FaEnvelope />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 group-hover:text-yellow-600 transition-colors">{order.user_email || "Guest"}</p>
+                      <p className="text-xs text-gray-500">
+                        {order.username || "Guest"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-bold text-gray-900 group-hover:text-yellow-600 transition-colors">{order.user_email || "Guest"}</p>
-                    <p className="text-xs text-gray-500">
-                      {order.username || "Guest"}
+
+                  <div className="col-span-3">
+                    <p className="text-sm text-gray-700 line-clamp-2" title={getProductNames()}>
+                      {getProductNames()}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      {order.type === 'ticket' ? '🎫 Ticket' : '📦 Product'}
                     </p>
                   </div>
-                </div>
 
-                <div className="col-span-2 text-right">
-                  <p className="font-bold text-gray-900">Rp {Number(order.amount).toLocaleString()}</p>
-                </div>
+                  <div className="col-span-2 text-right">
+                    <p className="font-bold text-gray-900">Rp {Number(order.amount).toLocaleString()}</p>
+                  </div>
 
-                <div className="col-span-3 text-center">
-                  {getStatusBadge(order.status)}
-                </div>
+                  <div className="col-span-2 text-center">
+                    {getStatusBadge(order.status)}
+                  </div>
 
-                <div className="col-span-2 text-center text-xs text-gray-500">
-                  <p className="font-bold">{new Date(order.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</p>
-                  <p>{new Date(order.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p>
+                  <div className="col-span-1 text-center text-xs text-gray-500">
+                    <p className="font-bold">{new Date(order.created_at).toLocaleDateString('id-ID', { day: '2-digit', month: 'short' })}</p>
+                    <p>{new Date(order.created_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}</p>
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       )
