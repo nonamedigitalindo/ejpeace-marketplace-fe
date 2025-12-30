@@ -85,7 +85,7 @@ export default function ImageCarousel({ images = [], interval = 5000, title = "E
                         x: { type: "spring", stiffness: 300, damping: 30 },
                         opacity: { duration: 0.3 },
                     }}
-                    className="absolute inset-0 w-full h-full object-cover"
+                    className="absolute inset-0 w-full h-full object-contain sm:object-cover"
                     draggable={false}
                 />
             </AnimatePresence>
@@ -121,8 +121,8 @@ export default function ImageCarousel({ images = [], interval = 5000, title = "E
                             key={idx}
                             onClick={() => setPage([idx, idx > imageIndex ? 1 : -1])}
                             className={`h-1.5 rounded-full transition-all duration-500 ${idx === imageIndex
-                                    ? "bg-yellow-400 w-8 shadow-lg shadow-yellow-400/50"
-                                    : "bg-white/30 w-4 hover:bg-white/60"
+                                ? "bg-yellow-400 w-8 shadow-lg shadow-yellow-400/50"
+                                : "bg-white/30 w-4 hover:bg-white/60"
                                 }`}
                             aria-label={`Go to image ${idx + 1}`}
                         />
