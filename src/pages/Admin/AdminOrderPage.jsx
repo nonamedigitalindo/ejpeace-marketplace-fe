@@ -137,7 +137,9 @@ export default function AdminOrders() {
           onClick={async () => {
             try {
               setExporting(true);
-              await exportOrdersXLSX(startDate || null, endDate || null);
+              // Pass current filter status to export (use null for 'all')
+              const statusFilter = filter === 'all' ? null : filter;
+              await exportOrdersXLSX(startDate || null, endDate || null, statusFilter);
             } catch (error) {
               console.error("Export failed:", error);
               alert("Failed to export orders. Please try again.");
@@ -295,19 +297,6 @@ export default function AdminOrders() {
             </div>
           ) : (
             filteredOrders.map((order) => {
-              // Extract product names from order details
-              const getProductNames = () => {
-                if (order.type === 'ticket' && order.details) {
-                  return order.details.event_name || 'Event Ticket';
-                }
-                if (order.details?.items && order.details.items.length > 0) {
-                  return order.details.items.map(item =>
-                    `${item.product_name} (x${item.quantity})`
-                  ).join(', ');
-                }
-                return '-';
-              };
-
               return (
                 <div key={order.id} className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center p-4 bg-white rounded-2xl shadow-sm hover:shadow-md border border-gray-100 transition-all duration-200 group">
                   <div className="col-span-1 font-mono text-xs text-gray-400">#{order.id}</div>
@@ -325,8 +314,8 @@ export default function AdminOrders() {
                   </div>
 
                   <div className="col-span-3">
-                    <p className="text-sm text-gray-700 line-clamp-2" title={getProductNames()}>
-                      {getProductNames()}
+                    <p className="text-sm text-gray-700 line-clamp-2" title={order.product_name || '-'}>
+                      {order.product_name || '-'}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">
                       {order.type === 'ticket' ? '🎫 Ticket' : '📦 Product'}

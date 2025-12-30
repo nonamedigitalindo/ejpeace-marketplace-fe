@@ -6,13 +6,41 @@ export default function OrderCard({ order }) {
   // Safely extract order properties
   const orderId = order?.id || "N/A";
   const orderStatus = order?.status || "unknown";
-  const orderAmount = order?.total_amount || 0;
+  const orderAmount = order?.total_amount || order?.amount || 0;
   const orderDate = order?.created_at || new Date().toISOString();
   const paymentId = order?.payment_id || "N/A";
 
-  // Determine order type based on product category
+  // Get product name from various sources for compatibility
+  const getProductName = () => {
+    // Source 1: Direct product object (from purchase endpoint)
+    if (order?.product?.name) {
+      return order.product.name;
+    }
+    // Source 2: Items array in details (from order endpoint)
+    if (order?.details?.items && order.details.items.length > 0) {
+      return order.details.items.map(item =>
+        `${item.product_name}${item.quantity > 1 ? ` (x${item.quantity})` : ''}`
+      ).join(', ');
+    }
+    // Source 3: Event name for ticket orders
+    if (order?.details?.event_name) {
+      return order.details.event_name;
+    }
+    return "Product Name";
+  };
+
+  // Get product data for display
+  const productData = {
+    name: getProductName(),
+    category: order?.product?.category || order?.type || null,
+    size: order?.product?.size || null,
+  };
+
+  // Determine order type based on product category or order type
   const orderType =
-    order?.product?.category?.toLowerCase() === "ticket" ? "ticket" : "product";
+    order?.product?.category?.toLowerCase() === "ticket" || order?.type === "ticket"
+      ? "ticket"
+      : "product";
 
   // Format date
   const formattedDate = new Date(orderDate).toLocaleDateString("id-ID", {
@@ -94,11 +122,11 @@ export default function OrderCard({ order }) {
           <div className="flex justify-between items-start">
             <div className="flex-1">
               <p className="font-medium">
-                {order?.product?.name || "Event Name"}
+                {productData.name}
               </p>
               <div className="flex gap-3 text-sm text-gray-500 mt-1">
                 <span>
-                  Product Type: {order?.product?.category || "General"}
+                  Product Type: {productData.category || "General"}
                 </span>
                 {/* <span>Qty: {order?.product?.quantity || 1}</span> */}
               </div>
@@ -114,14 +142,14 @@ export default function OrderCard({ order }) {
           <div className="flex justify-between items-start">
             <div className="flex-1">
               <p className="font-medium">
-                {order?.product?.name || "Product Name"}
+                {productData.name}
               </p>
               <div className="flex gap-3 text-sm text-gray-500 mt-1">
-                {order?.product?.size && order.product.size !== "null" && (
-                  <span>Size: {order.product.size}</span>
+                {productData.size && productData.size !== "null" && (
+                  <span>Size: {productData.size}</span>
                 )}
-                {order?.product?.category && (
-                  <span>Category: {order.product.category}</span>
+                {productData.category && (
+                  <span>Category: {productData.category}</span>
                 )}
                 {/* <span>Qty: {order?.product?.quantity || 1}</span> */}
               </div>

@@ -14,12 +14,13 @@ export const getOrdersById = async (id) => {
   return res.data;
 };
 
-export const exportOrdersXLSX = async (startDate = null, endDate = null) => {
+export const exportOrdersXLSX = async (startDate = null, endDate = null, status = null) => {
   try {
     const params = new URLSearchParams();
     params.append("type", "xlsx");
     if (startDate) params.append("start_date", startDate);
     if (endDate) params.append("end_date", endDate);
+    if (status) params.append("status", status);
 
     const token = localStorage.getItem('token'); // Adjust based on your auth
 

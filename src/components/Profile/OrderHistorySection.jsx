@@ -10,35 +10,24 @@ export default function OrderHistorySection({ orders }) {
   // Ensure orders is an array and filter for completed/paid status
   const paidStatuses = ["paid", "completed", "settled", "success"];
 
-  // Debug logs
-  console.log("OrderHistorySection received orders:", orders);
-  console.log("Orders is array:", Array.isArray(orders));
-
   const ordersArray = Array.isArray(orders)
-    ? orders.filter((order) => {
-      const status = order.status?.toLowerCase();
-      const isIncluded = paidStatuses.includes(status);
-      console.log(`Order ${order.id} status: ${status}, included: ${isIncluded}`);
-      return isIncluded;
-    })
+    ? orders.filter((order) => paidStatuses.includes(order.status?.toLowerCase()))
     : [];
-
-  console.log("Filtered ordersArray:", ordersArray);
 
   // Filter orders
   const filteredOrders = ordersArray.filter((order) => {
     if (filter === "all") return true;
+
+    // Get category from product or order type
+    const category = order.product?.category?.toLowerCase() || order.type;
+
     if (filter === "products") {
-      // For products, check if product exists and category is not "ticket"
-      return (
-        order.product && order.product.category?.toLowerCase() !== "ticket"
-      );
+      // For products, category should not be "ticket"
+      return category !== "ticket";
     }
     if (filter === "events") {
-      // For events, check if product exists and category is "ticket"
-      return (
-        order.product && order.product.category?.toLowerCase() === "ticket"
-      );
+      // For events, category should be "ticket"
+      return category === "ticket";
     }
     return true;
   });
