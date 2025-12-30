@@ -80,7 +80,7 @@ export default function AuthCard({ isRegister: isRegisterProp = false }) {
         return;
       } else {
         // Redirect back to previous page or default to home
-        const from = location.state?.from?.pathname || "/ejpeace/home";
+        const from = location.state?.from?.pathname || "/ejpeace/store";
         navigate(from, { replace: true });
         return;
       }
