@@ -81,6 +81,10 @@ export default function AuthCard({ isRegister: isRegisterProp = false }) {
       } else {
         // Redirect back to previous page or default to home
         const from = location.state?.from?.pathname || "/ejpeace/store";
+        if (from === "/ejpeace/checkout-form") {
+          navigate("/ejpeace/store");
+          return;
+        }
         navigate(from, { replace: true });
         return;
       }
