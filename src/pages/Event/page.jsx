@@ -17,6 +17,9 @@ export default function EventPage() {
   const pastEventsRef = useRef(null);
   const [isHoveringPastEvents, setIsHoveringPastEvents] = useState(false);
 
+  // Hero image carousel state
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
   // FETCH EVENTS
   useEffect(() => {
     const fetchEvents = async () => {
@@ -49,7 +52,7 @@ export default function EventPage() {
     fetchEvents();
   }, []);
 
-  // Auto-Scroll Logic
+  // Auto-Scroll Logic for Past Events
   useEffect(() => {
     const container = pastEventsRef.current;
     // STOP auto-scroll if hovering (includes hovering the buttons now)
@@ -70,6 +73,32 @@ export default function EventPage() {
 
     return () => clearInterval(scrollInterval);
   }, [events, isHoveringPastEvents]);
+
+  // Helper function to get event images
+  const getEventImages = (event) => {
+    if (event?.images?.length > 0) return event.images;
+    if (event?.image) return [event.image];
+    return [];
+  };
+
+  // Get images for hero carousel (computed early for hooks)
+  const heroImages = selectedEvent ? getEventImages(selectedEvent) : [];
+
+  // Auto-rotate hero images
+  useEffect(() => {
+    if (heroImages.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % heroImages.length);
+    }, 5000); // Change image every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [heroImages.length]);
+
+  // Reset image index when selected event changes
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [selectedEvent?.id]);
 
   // Manual Scroll Handler
   const scrollPastEvents = (direction) => {
@@ -94,6 +123,7 @@ export default function EventPage() {
     });
   };
 
+  // formatDate helper
   const formatDate = (date) => {
     if (!date) return "Date TBA";
     return new Date(date).toLocaleDateString("id-ID", {
@@ -104,6 +134,7 @@ export default function EventPage() {
     });
   };
 
+  // formatTime helper
   const formatTime = (date) => {
     if (!date) return "Time TBA";
     return new Date(date).toLocaleTimeString("id-ID", {
@@ -111,12 +142,6 @@ export default function EventPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const getEventImages = (event) => {
-    if (event?.images?.length > 0) return event.images;
-    if (event?.image) return [event.image];
-    return [];
   };
 
   if (loading)
@@ -150,76 +175,177 @@ export default function EventPage() {
     );
 
   return (
-    <div className="min-h-screen bg-white text-gray-800 font-sans selection:bg-yellow-200 selection:text-black">
+    <div className="min-h-screen bg-[#1a1a2e] text-gray-800 font-sans selection:bg-yellow-200 selection:text-black">
 
-      {/* ================= HERO SECTION ================= */}
-      <div className="relative w-full h-auto min-h-[100svh] sm:h-[85vh] sm:min-h-[600px] overflow-hidden bg-black">
-        <div className="absolute inset-0 w-full h-full opacity-90">
-          <ImageCarousel
-            images={getEventImages(selectedEvent)}
-            title={selectedEvent.title}
-            interval={4000}
-            className="w-full h-full rounded-none"
-          />
+      {/* ================= HERO BANNER SECTION ================= */}
+      {/* Desktop: Full overlay | Mobile: Image only */}
+      <div className="relative w-full min-h-[50vh] md:min-h-[85vh] overflow-hidden bg-black">
+        {/* Background Images with Carousel Effect */}
+        {heroImages.map((image, idx) => (
+          <div
+            key={idx}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${idx === currentImageIndex ? 'opacity-100' : 'opacity-0'
+              }`}
+          >
+            {/* Blurred Background */}
+            <div
+              className="absolute inset-0 bg-cover bg-center blur-xl scale-110 opacity-60"
+              style={{ backgroundImage: `url(${resolveImageSrc(image)})` }}
+            />
+            <div
+              className="absolute inset-0 bg-center bg-no-repeat z-10 bg-cover"
+              style={{ backgroundImage: `url(${resolveImageSrc(image)})` }}
+            />
+          </div>
+        ))}
+
+        {/* Gradient overlay for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent pointer-events-none z-10" />
+        <div className="hidden md:block absolute inset-0 bg-gradient-to-r from-black/70 via-transparent to-transparent pointer-events-none z-10" />
+
+        {/* Desktop Content Overlay (hidden on mobile) */}
+        <div className="hidden md:flex absolute inset-0 items-end z-20">
+          <div className="w-full p-8 lg:p-16 xl:p-20 pb-12 lg:pb-20">
+            <div className="max-w-4xl">
+              {/* Featured badge */}
+              <div className="inline-flex items-center gap-2 bg-yellow-400 text-black px-4 py-1.5 rounded-full font-bold text-xs uppercase tracking-widest mb-6">
+                <span className="text-lg">⭐</span> Featured Event
+              </div>
+
+              {/* Title */}
+              <h1 className="text-5xl lg:text-7xl xl:text-8xl font-black text-white leading-[0.95] tracking-tight mb-4 uppercase">
+                {selectedEvent.title}
+              </h1>
+
+              {/* Description */}
+              <p className="text-gray-200 text-lg max-w-2xl mb-6 leading-relaxed">
+                {selectedEvent.description || "Experience the unforgettable moments with us."}
+              </p>
+
+              {/* Info Badges */}
+              <div className="flex flex-wrap items-center gap-4 mb-8 text-white/90 font-medium">
+                <div className="flex items-center gap-3 bg-black/50 backdrop-blur-md border border-white/20 px-4 py-2.5 rounded-full text-sm">
+                  <FaCalendarAlt className="text-yellow-400" />
+                  <span>{formatDate(selectedEvent.start_date)}</span>
+                </div>
+                <div className="flex items-center gap-3 bg-black/50 backdrop-blur-md border border-white/20 px-4 py-2.5 rounded-full text-sm">
+                  <FaClock className="text-yellow-400" />
+                  <span>{formatTime(selectedEvent.start_date)} - {formatTime(selectedEvent.end_date)}</span>
+                </div>
+                <div className="flex items-center gap-3 bg-black/50 backdrop-blur-md border border-white/20 px-4 py-2.5 rounded-full text-sm">
+                  <FaMapMarkerAlt className="text-yellow-400" />
+                  <span>{selectedEvent.location || "Location TBA"}</span>
+                </div>
+              </div>
+
+              {/* CTA Button */}
+              <button
+                onClick={() => handleGetTicket(selectedEvent)}
+                className="px-8 py-4 bg-yellow-400 text-black font-bold text-lg rounded-full hover:bg-yellow-300 transition-all inline-flex items-center gap-3"
+              >
+                GET TICKET NOW <FaArrowRight />
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Gradient overlay - lebih ringan di mobile */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 sm:via-black/40 to-transparent pointer-events-none" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/40 sm:from-black/60 via-transparent to-transparent pointer-events-none" />
-
-        {/* Content overlay - dioptimasi untuk mobile */}
-        <div className="absolute bottom-0 left-0 w-full flex flex-col justify-end p-4 sm:p-12 lg:p-20 z-10 pb-6 sm:pb-12">
-          <div className="max-w-full sm:max-w-4xl animate-in fade-in slide-in-from-bottom-10 duration-1000">
-            {/* Featured badge - lebih kecil di mobile */}
-            <div className="inline-flex items-center gap-1.5 sm:gap-2 bg-yellow-400 text-black px-3 sm:px-4 py-1 sm:py-1.5 rounded-full font-bold text-[10px] sm:text-xs uppercase tracking-widest mb-3 sm:mb-6 shadow-[0_0_20px_rgba(250,204,21,0.5)]">
-              <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-black rounded-full animate-pulse" />
-              Featured Event
-            </div>
-
-            {/* Title - ukuran responsif yang lebih baik */}
-            <h1 className="text-3xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-black text-white leading-[0.95] tracking-tight mb-3 sm:mb-6 drop-shadow-2xl uppercase line-clamp-2 sm:line-clamp-none">
-              {selectedEvent.title}
-            </h1>
-
-            {/* Description - disembunyikan di mobile kecil, dipendekkan di mobile */}
-            <p className="hidden sm:block text-gray-200 text-base sm:text-lg md:text-xl max-w-2xl mb-4 sm:mb-8 leading-relaxed font-light border-l-4 border-yellow-400 pl-4 sm:pl-6 drop-shadow-md line-clamp-2 sm:line-clamp-none">
-              {selectedEvent.description || "Experience the unforgettable moments with us."}
-            </p>
-
-            {/* Info badges - layout vertikal di mobile, horizontal di tablet+ */}
-            <div className="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-2 sm:gap-4 md:gap-6 mb-4 sm:mb-8 text-white/90 font-medium">
-              <div className="flex items-center gap-2 sm:gap-3 bg-white/10 backdrop-blur-md border border-white/20 px-3 sm:px-4 py-2 sm:py-3 rounded-full text-xs sm:text-sm">
-                <FaCalendarAlt className="text-yellow-400 text-sm sm:text-base" />
-                <span>{formatDate(selectedEvent.start_date)}</span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 bg-white/10 backdrop-blur-md border border-white/20 px-3 sm:px-4 py-2 sm:py-3 rounded-full text-xs sm:text-sm">
-                <FaClock className="text-yellow-400 text-sm sm:text-base" />
-                <span>
-                  {formatTime(selectedEvent.start_date)}
-                  {selectedEvent.end_date && ` - ${formatTime(selectedEvent.end_date)}`}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3 bg-white/10 backdrop-blur-md border border-white/20 px-3 sm:px-4 py-2 sm:py-3 rounded-full text-xs sm:text-sm">
-                <FaMapMarkerAlt className="text-yellow-400 text-sm sm:text-base" />
-                <span className="truncate max-w-[150px] sm:max-w-none">{selectedEvent.location || "Location TBA"}</span>
-              </div>
-            </div>
-
-            {/* CTA Button - ukuran responsif */}
-            <button
-              onClick={() => handleGetTicket(selectedEvent)}
-              className="group relative px-6 sm:px-10 py-3 sm:py-4 bg-yellow-400 text-black font-extrabold text-sm sm:text-lg md:text-xl rounded-full overflow-hidden shadow-[0_0_40px_rgba(250,204,21,0.4)] hover:shadow-[0_0_60px_rgba(250,204,21,0.6)] hover:scale-105 transition-all duration-300 w-full sm:w-auto"
-            >
-              <div className="absolute inset-0 bg-white/20 group-hover:translate-x-full transition-transform duration-500 ease-out -skew-x-12 origin-left" />
-              <span className="relative flex items-center justify-center gap-2 sm:gap-3">
-                GET TICKET NOW
-                <FaArrowRight className="group-hover:translate-x-1 transition-transform text-sm sm:text-base" />
-              </span>
-            </button>
+        {/* Carousel Indicators (Desktop) */}
+        {heroImages.length > 1 && (
+          <div className="hidden md:flex absolute top-1/2 right-8 -translate-y-1/2 z-20 flex-col gap-2">
+            {heroImages.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentImageIndex(idx)}
+                className={`w-3 h-3 rounded-full transition-all ${idx === currentImageIndex ? 'bg-yellow-400 scale-125' : 'bg-white/50'
+                  }`}
+              />
+            ))}
           </div>
+        )}
+      </div>
+
+      {/* ================= MOBILE CONTENT CARD (below hero) ================= */}
+      <div className="md:hidden bg-[#0d0d1a] px-4 py-6 relative z-30">
+        <div className="bg-transparent p-0">
+          {/* Featured badge */}
+          <div className="inline-flex items-center gap-2 bg-yellow-400 text-black px-4 py-1.5 rounded-full font-bold text-xs uppercase tracking-widest mb-4">
+            <span className="text-lg">⭐</span> Featured Event
+          </div>
+
+          {/* Title */}
+          <h1 className="text-4xl font-black text-white leading-tight tracking-tight mb-2 uppercase">
+            {selectedEvent.title}
+          </h1>
+
+          {/* Description */}
+          <p className="text-gray-400 text-sm mb-6">
+            {selectedEvent.description || "Experience the unforgettable moments with us."}
+          </p>
+
+          {/* Info Badges - Stacked with dark bg and yellow border */}
+          <div className="space-y-3 mb-6">
+            <div className="flex items-center gap-3 bg-[#0d0d1a] border border-yellow-500/50 px-4 py-3 rounded-xl text-white">
+              <FaCalendarAlt className="text-yellow-400" />
+              <span>{formatDate(selectedEvent.start_date)}</span>
+            </div>
+            <div className="flex items-center gap-3 bg-[#0d0d1a] border border-yellow-500/50 px-4 py-3 rounded-xl text-white">
+              <FaClock className="text-yellow-400" />
+              <span>{formatTime(selectedEvent.start_date)} - {formatTime(selectedEvent.end_date)}</span>
+            </div>
+            <div className="flex items-center gap-3 bg-[#0d0d1a] border border-yellow-500/50 px-4 py-3 rounded-xl text-white">
+              <FaMapMarkerAlt className="text-yellow-400" />
+              <span>{selectedEvent.location || "Location TBA"}</span>
+            </div>
+          </div>
+
+          {/* CTA Button */}
+          <button
+            onClick={() => handleGetTicket(selectedEvent)}
+            className="w-full py-4 bg-yellow-400 text-black font-bold text-base rounded-xl hover:bg-yellow-300 transition-all flex items-center justify-center gap-2"
+          >
+            <FaTicketAlt /> GET TICKET NOW <FaArrowRight />
+          </button>
         </div>
       </div>
 
+      {/* ================= DETAIL EVENT SECTION (Image Gallery) ================= */}
+      {heroImages.length > 0 && (
+        <div className="bg-white py-12 sm:py-16 px-4 sm:px-8">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-6">Detail Event</h2>
+
+            {/* Image Gallery - 1 photo per row, banner-like aspect ratio */}
+            <div className="flex flex-col gap-4">
+              {heroImages.map((image, idx) => (
+                <div
+                  key={idx}
+                  className="relative aspect-[16/9] rounded-xl overflow-hidden cursor-pointer group"
+                  onClick={() => {
+                    setCurrentImageIndex(idx);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  <img
+                    src={resolveImageSrc(image)}
+                    alt={`Event photo ${idx + 1}`}
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                    <div className="w-12 h-12 bg-white/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                      <FaArrowRight className="text-black" />
+                    </div>
+                  </div>
+                  {idx === 0 && (
+                    <div className="absolute top-3 left-3 bg-yellow-400 text-black text-xs font-bold px-3 py-1.5 rounded-full">
+                      Main
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ================= PAST EVENTS SECTION ================= */}
       {concluded.length > 0 && (
