@@ -14,26 +14,7 @@ import {
 import { getProducts } from "../../api/product";
 import { getEvents } from "../../api/event";
 
-// Converter tanggal ke format MySQL
-function toMySQLDateTime(date) {
-  if (!date) return null;
-  const d = new Date(date);
-  const pad = (n) => (n < 10 ? "0" + n : n);
 
-  return (
-    d.getFullYear() +
-    "-" +
-    pad(d.getMonth() + 1) +
-    "-" +
-    pad(d.getDate()) +
-    " " +
-    pad(d.getHours()) +
-    ":" +
-    pad(d.getMinutes()) +
-    ":" +
-    pad(d.getSeconds())
-  );
-}
 
 export default function CRUDVoucher() {
   const [vouchers, setVouchers] = useState([]);
@@ -42,6 +23,7 @@ export default function CRUDVoucher() {
   const [openModal, setOpenModal] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Form State
   const [form, setForm] = useState({
@@ -211,6 +193,7 @@ export default function CRUDVoucher() {
     }
 
     try {
+      setSubmitting(true);
       const payload = {
         code: form.code,
         discount_type: form.discount_type,
@@ -219,8 +202,8 @@ export default function CRUDVoucher() {
         used_count: Number(form.used_count),
         min_order_value: Number(form.min_order_value),
         is_active: Number(form.is_active),
-        valid_from: toMySQLDateTime(form.valid_from),
-        valid_until: toMySQLDateTime(form.valid_until),
+        valid_from: form.valid_from ? new Date(form.valid_from).toISOString() : null,
+        valid_until: form.valid_until ? new Date(form.valid_until).toISOString() : null,
         voucher_type: form.voucher_type.value,
         apply_to_all: form.apply_to_all,
         product_ids: form.selected_products.map(i => i.value),
@@ -242,6 +225,8 @@ export default function CRUDVoucher() {
     } catch (err) {
       console.error("Save voucher error:", err.response?.data || err);
       alert(`ERROR: ${err.response?.data?.error || "Failed to save voucher"}`);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -608,8 +593,10 @@ export default function CRUDVoucher() {
                   </button>
                   <button
                     type="submit"
-                    className="bg-linear-to-r from-yellow-400 to-amber-500 text-black px-8 py-3 rounded-xl font-bold hover:shadow-lg hover:scale-105 transition-all"
+                    disabled={submitting}
+                    className="bg-linear-to-r from-yellow-400 to-amber-500 text-black px-8 py-3 rounded-xl font-bold hover:shadow-lg hover:scale-105 transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
+                    {submitting && <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black"></div>}
                     {isEdit ? "Update Voucher" : "Create Voucher"}
                   </button>
                 </div>
