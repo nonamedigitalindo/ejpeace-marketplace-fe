@@ -2,7 +2,6 @@ import { useLocation } from "react-router-dom";
 import { useRef } from "react";
 import {
   createPurchase,
-  createPurchaseDirect,
   initiatePayment,
 } from "../../../api/purchase";
 import { createTicket, initiateTicketPayment } from "../../../api/ticket";
@@ -51,10 +50,10 @@ export default function PaymentPage() {
   const items = buyNowItem
     ? [buyNowItem]
     : Array.isArray(selectedCartItems)
-    ? selectedCartItems
-    : Array.isArray(cartItems)
-    ? cartItems
-    : [];
+      ? selectedCartItems
+      : Array.isArray(cartItems)
+        ? cartItems
+        : [];
 
   // Check if there are items to process
   const hasItems = items && items.length > 0;
@@ -95,7 +94,7 @@ export default function PaymentPage() {
     //   const discountPercent = parseFloat(selectedVoucher.discount_value) || 0;
     //   return (originalTotal * discountPercent) / 100;
     // } else 
-      if (selectedVoucher.discount_type === "fixed") {
+    if (selectedVoucher.discount_type === "fixed") {
       const discountAmount = parseFloat(selectedVoucher.discount_value) || 0;
       return Math.min(discountAmount, originalTotal);
     }
@@ -152,57 +151,17 @@ export default function PaymentPage() {
       } else {
         // Handle product purchase
         if (buyNowItem) {
-          // ✅ FIX: Gunakan finalTotal (harga setelah diskon)
-          const amountToPay = Math.round(finalTotal);
+          // ✅ FIX: Use purchaseId passed from CheckoutFormPage
+          // Purchase was already created on CheckoutFormPage, no need to create again
+          if (!purchaseId) {
+            console.error("❌ No purchaseId found for buyNowItem. Checkout flow error.");
+            alert("Checkout error: Purchase not found. Please try again from checkout.");
+            return;
+          }
 
-          const directPurchaseData = {
-            purchase_data: {
-              product_id: buyNowItem.id,
-              total_amount: amountToPay, // ✅ Harga sudah dipotong diskon
-              description: `Direct purchase of ${buyNowItem.name}`,
-              // ✅ Kirim informasi voucher untuk validasi backend
-              ...(selectedVoucher && {
-                voucher_code: selectedVoucher.code.trim(),
-                voucher_id: selectedVoucher.id,
-                discount_amount: Math.round(discountAmount),
-                original_amount: Math.round(originalTotal),
-              }),
-            },
-            shipping_address: {
-              full_name: form.full_name,
-              phone: form.phone,
-              address_line1: form.address_line1,
-              city: form.city,
-              postal_code: form.postal_code,
-            }
-            // ,
-            // ✅ Root level voucher info
-            // ...(selectedVoucher && {
-            //   voucher_code: selectedVoucher.code.trim(),
-            //   voucher_id: selectedVoucher.id,
-            //   discount_amount: Math.round(discountAmount),
-            //   original_amount: Math.round(originalTotal),
-            // }),
-          };
+          console.log("✅ Using existing purchaseId for buyNowItem:", purchaseId);
 
-          // DEBUG: Log what we're sending
-          console.log("=== DIRECT PURCHASE DEBUG ===");
-          console.log("Original Total:", originalTotal);
-          console.log("Discount Amount:", discountAmount);
-          console.log("Final Total (Amount To Pay):", amountToPay);
-          console.log("Selected Voucher:", selectedVoucher);
-          console.log("Payload:", JSON.stringify(directPurchaseData, null, 2));
-          console.log("============================");
-
-          const purchaseResponse = await createPurchaseDirect(
-            directPurchaseData
-          );
-          const purchaseId = purchaseResponse.data?.id || purchaseResponse.id;
-
-          console.log("✅ Direct Purchase Created:", purchaseId);
-          console.log("Full Response:", purchaseResponse);
-
-          // Initiate payment dengan amount yang sudah benar
+          // Initiate payment with the existing purchaseId
           const paymentResponse = await initiatePayment(purchaseId);
 
           console.log("📱 Payment initiated for purchase:", purchaseId);
@@ -450,11 +409,10 @@ export default function PaymentPage() {
       <button
         onClick={handlePayment}
         disabled={loading}
-        className={`w-full py-3 rounded-lg font-bold ${
-          loading
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-black text-white hover:bg-gray-800"
-        }`}
+        className={`w-full py-3 rounded-lg font-bold ${loading
+          ? "bg-gray-400 cursor-not-allowed"
+          : "bg-black text-white hover:bg-gray-800"
+          }`}
       >
         {loading ? "Proses Pembayaran..." : `Beli`}
       </button>
