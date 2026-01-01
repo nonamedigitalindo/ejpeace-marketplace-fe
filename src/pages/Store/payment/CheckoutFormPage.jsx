@@ -37,12 +37,12 @@ export default function CheckoutFormPage() {
   // Calculate total price
   const totalPrice = Array.isArray(itemsToProcess)
     ? itemsToProcess.reduce(
-        (total, item) =>
-          total +
-          (parseFloat(item.price) || 0) *
-            (parseInt(item.qty || item.quantity) || 1),
-        0
-      )
+      (total, item) =>
+        total +
+        (parseFloat(item.price) || 0) *
+        (parseInt(item.qty || item.quantity) || 1),
+      0
+    )
     : 0;
 
   // Prefill form with user data if logged in. Try server first, fallback to localStorage.
@@ -309,9 +309,9 @@ export default function CheckoutFormPage() {
             form: formData,
             buyNowItem: buyNowItem,
             purchaseId: purchaseId,
-            total: totalPrice,
-            subtotal: totalPrice,
-            discount: 0,
+            total: response.data?.total_amount || response.total_amount || totalPrice,
+            subtotal: totalPrice, // Keep original subtotal as is
+            discount: response.data?.discount_amount || response.discount_amount || 0,
             isTicket: false,
           },
         });
@@ -369,9 +369,9 @@ export default function CheckoutFormPage() {
             cartItems: cartItems,
             selectedCartItems: selectedCartItems,
             purchaseId: purchaseId,
-            total: totalPrice,
-            subtotal: totalPrice,
-            discount: 0,
+            total: response.data?.total_amount || response.total_amount || totalPrice,
+            subtotal: totalPrice, // Keep original subtotal
+            discount: response.data?.discount_amount || response.discount_amount || 0,
             isTicket: false,
           },
         });
@@ -624,7 +624,7 @@ export default function CheckoutFormPage() {
               </div>
 
               {/* Voucher Code Input */}
-              {/* <div className="mb-6">
+              <div className="mb-6">
                 <label className="block text-sm font-medium mb-1">
                   Voucher Code (Optional)
                 </label>
@@ -641,7 +641,7 @@ export default function CheckoutFormPage() {
                     ✓ Voucher code will be applied at payment
                   </p>
                 )}
-              </div> */}
+              </div>
 
               <div className="flex gap-4">
                 <button
