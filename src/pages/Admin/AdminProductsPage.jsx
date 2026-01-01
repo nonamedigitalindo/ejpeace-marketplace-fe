@@ -97,8 +97,10 @@ export default function AdminProducts() {
           <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-4 bg-yellow-50/80 rounded-2xl text-xs font-bold text-gray-500 uppercase tracking-wider border border-yellow-100 mb-2">
             <div className="col-span-1 text-center">#</div>
             <div className="col-span-1 text-center">Image</div>
-            <div className="col-span-4">Product Details</div>
-            <div className="col-span-2 text-center">Category</div>
+            <div className="col-span-3">Product Details</div>
+            <div className="col-span-1 text-center">Category</div>
+            <div className="col-span-1 text-center">Stock</div>
+            <div className="col-span-1 text-center">Sold</div>
             <div className="col-span-2 text-right">Price</div>
             <div className="col-span-2 text-center">Actions</div>
           </div>
@@ -160,14 +162,26 @@ export default function AdminProducts() {
                     </div>
                   </div>
 
-                  <div className="col-span-4">
+                  <div className="col-span-3">
                     <h3 className="font-bold text-gray-800 text-lg leading-tight group-hover:text-yellow-600 transition-colors">{p.name}</h3>
                     <p className="text-sm text-gray-500 truncate mt-1 max-w-xs">{p.description && p.description !== 'undefined' ? p.description.replace(/<[^>]+>/g, '') : "No description"}</p>
                   </div>
 
-                  <div className="col-span-2 text-center">
-                    <span className="px-3 py-1 bg-yellow-50 text-yellow-700 rounded-full text-xs font-bold uppercase tracking-wide border border-yellow-100">
-                      {p.category || 'Uncategorized'}
+                  <div className="col-span-1 text-center">
+                    <span className="px-2 py-1 bg-yellow-50 text-yellow-700 rounded-full text-xs font-bold uppercase tracking-wide border border-yellow-100">
+                      {p.category || '-'}
+                    </span>
+                  </div>
+
+                  <div className="col-span-1 text-center">
+                    <span className={`px-2 py-1 rounded-full text-xs font-bold ${(p.quantity || p.stock || 0) > 10 ? 'bg-green-100 text-green-700 border border-green-200' : (p.quantity || p.stock || 0) > 0 ? 'bg-yellow-100 text-yellow-700 border border-yellow-200' : 'bg-red-100 text-red-600 border border-red-200'}`}>
+                      {p.quantity || p.stock || 0}
+                    </span>
+                  </div>
+
+                  <div className="col-span-1 text-center">
+                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold border border-blue-200">
+                      {p.sold_count || p.sold || 0}
                     </span>
                   </div>
 
