@@ -89,3 +89,13 @@ export const validateVoucherForItems = async (code, orderAmount, productIds = []
   return res.data;
 };
 
+// VALIDATE VOUCHER USAGE (public endpoint - no auth required)
+export const validateVoucherUsage = async (code, productIds = [], eventIds = []) => {
+  const res = await api.post("/vouchers/validate-usage", {
+    code,
+    product_ids: productIds,
+    event_ids: eventIds,
+  });
+  return res.data;
+};
+

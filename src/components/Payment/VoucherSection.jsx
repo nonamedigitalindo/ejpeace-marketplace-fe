@@ -8,6 +8,7 @@ const VoucherSection = ({
   onVoucherCodeChange,
   onApplyVoucher,
   onRemoveVoucher,
+  readOnly = false, // When true, voucher cannot be removed (passed from checkout)
 }) => {
   return (
     <div className="space-y-3">
@@ -49,18 +50,21 @@ const VoucherSection = ({
                 {selectedVoucher.discount_type === "percentage"
                   ? `${selectedVoucher.discount_value}% OFF`
                   : `Rp ${parseFloat(
-                      selectedVoucher.discount_value
-                    ).toLocaleString()} OFF`}
+                    selectedVoucher.discount_value
+                  ).toLocaleString()} OFF`}
               </p>
             </div>
           </div>
 
-          <button
-            onClick={onRemoveVoucher}
-            className="text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1 rounded font-semibold transition"
-          >
-            Remove
-          </button>
+          {/* Only show Remove button if NOT readOnly */}
+          {!readOnly && (
+            <button
+              onClick={onRemoveVoucher}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50 px-3 py-1 rounded font-semibold transition"
+            >
+              Remove
+            </button>
+          )}
         </div>
       ) : (
         /* Jika voucher BELUM dipilih → tampilkan input dan tombol apply */
@@ -77,11 +81,10 @@ const VoucherSection = ({
             <button
               onClick={onApplyVoucher}
               disabled={voucherLoading || !voucherCode.trim()}
-              className={`pt-2 mb-6 rounded-lg font-semibold text-white transition ${
-                voucherLoading || !voucherCode.trim()
+              className={`pt-2 mb-6 rounded-lg font-semibold text-white transition ${voucherLoading || !voucherCode.trim()
                   ? "bg-gray-400 cursor-not-allowed"
                   : "bg-blue-500 hover:bg-blue-600"
-              }`}
+                }`}
             >
               {voucherLoading ? "Applying..." : "Apply"}
             </button>

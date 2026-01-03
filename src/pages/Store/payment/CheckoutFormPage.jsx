@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { createPurchase, createPurchaseDirect } from "../../../api/purchase";
 import { getProductById } from "../../../api/product";
+import { validateVoucherUsage } from "../../../api/voucher";
 import { BASE_URL } from "../../../api/apiClient";
 import { getUserProfile } from "../../../api/user";
 import useAppStore from "../../../stores/useAppStore";
@@ -25,6 +26,9 @@ export default function CheckoutFormPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [stockErrors, setStockErrors] = useState({});
+  const [voucherInfo, setVoucherInfo] = useState(null);
+  const [voucherLoading, setVoucherLoading] = useState(false);
+  const [voucherError, setVoucherError] = useState(null);
 
   // Check if this is a "Buy Now" purchase
   const buyNowItem = location.state?.buyNowItem;
@@ -231,7 +235,48 @@ export default function CheckoutFormPage() {
 
     return true;
   };
+  const handleApplyVoucher = async () => {
+    if (!formData.voucher_code.trim()) {
+      setVoucherError("Please enter a voucher code");
+      return;
+    }
 
+    setVoucherLoading(true);
+    setVoucherError(null);
+    setVoucherInfo(null);
+
+    try {
+      // Get product IDs from items to process
+      const productIds = itemsToProcess.map(item => item.id || item.product_id);
+
+      const response = await validateVoucherUsage(
+        formData.voucher_code,
+        productIds,
+        [] // No event IDs for product checkout
+      );
+
+      console.log("✅ Voucher validation response:", response);
+
+      if (response.data?.valid) {
+        setVoucherInfo(response.data);
+        setVoucherError(null);
+      } else {
+        setVoucherError(response.data?.error || "Voucher is not valid");
+        setVoucherInfo(null);
+      }
+    } catch (error) {
+      console.error("❌ Error validating voucher:", error);
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || "Failed to validate voucher";
+      setVoucherError(errorMessage);
+      setVoucherInfo(null);
+    } finally {
+      setVoucherLoading(false);
+    }
+  };
+
+  // Calculate final amount with discount
+  const discountAmount = voucherInfo?.discount_amount || 0;
+  const finalAmount = totalPrice - discountAmount;
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -311,7 +356,8 @@ export default function CheckoutFormPage() {
             purchaseId: purchaseId,
             total: response.data?.total_amount || response.total_amount || totalPrice,
             subtotal: totalPrice, // Keep original subtotal as is
-            discount: response.data?.discount_amount || response.discount_amount || 0,
+            discount: response.data?.discount_amount || response.discount_amount || discountAmount,
+            voucherInfo: voucherInfo, // Pass voucher info from checkout
             isTicket: false,
           },
         });
@@ -371,7 +417,8 @@ export default function CheckoutFormPage() {
             purchaseId: purchaseId,
             total: response.data?.total_amount || response.total_amount || totalPrice,
             subtotal: totalPrice, // Keep original subtotal
-            discount: response.data?.discount_amount || response.discount_amount || 0,
+            discount: response.data?.discount_amount || response.discount_amount || discountAmount,
+            voucherInfo: voucherInfo, // Pass voucher info from checkout
             isTicket: false,
           },
         });
@@ -522,10 +569,21 @@ export default function CheckoutFormPage() {
                   <span>Shipping</span>
                   <span>Rp 0</span>
                 </div>
+                {voucherInfo && discountAmount > 0 && (
+                  <div className="flex justify-between mb-2 text-green-600">
+                    <span>Discount ({voucherInfo.voucher?.code})</span>
+                    <span>
+                      - {discountAmount.toLocaleString("id-ID", {
+                        currency: "IDR",
+                        style: "currency",
+                      })}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold text-lg mt-4 pt-4 border-t">
                   <span>Total</span>
                   <span>
-                    {totalPrice.toLocaleString("id-ID", {
+                    {finalAmount.toLocaleString("id-ID", {
                       currency: "IDR",
                       style: "currency",
                     })}
@@ -628,25 +686,76 @@ export default function CheckoutFormPage() {
                 <label className="block text-sm font-medium mb-1">
                   Voucher Code (Optional)
                 </label>
-                <input
-                  type="text"
-                  name="voucher_code"
-                  value={formData.voucher_code}
-                  onChange={handleChange}
-                  placeholder="Enter voucher code"
-                  className="w-full border p-3 rounded-lg"
-                />
-                {formData.voucher_code && (
-                  <p className="text-xs text-green-600 mt-1">
-                    ✓ Voucher code will be applied at payment
+                <div className="flex flex-col">
+                  <input
+                    type="text"
+                    name="voucher_code"
+                    value={formData.voucher_code}
+                    onChange={(e) => {
+                      handleChange(e);
+                      // Clear voucher info when code changes
+                      if (voucherInfo) {
+                        setVoucherInfo(null);
+                      }
+                    }}
+                    placeholder="Enter voucher code"
+                    className={`flex-1 border p-3 rounded-lg ${voucherError ? "border-red-500" : voucherInfo ? "border-green-500" : ""
+                      }`}
+                    disabled={voucherLoading}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyVoucher}
+                    disabled={voucherLoading || !formData.voucher_code.trim()}
+                    className="px-4 py-3 -mt-4 bg-black text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                  >
+                    {voucherLoading ? "Validating..." : "Apply"}
+                  </button>
+                </div>
+                {/* Voucher Error */}
+                {voucherError && (
+                  <p className="text-xs text-red-600 mt-1">
+                    ✕ {voucherError}
                   </p>
+                )}
+
+                {/* Voucher Success */}
+                {voucherInfo && (
+                  <div className="mt-2 p-3 bg-green-50 rounded-lg border border-green-200">
+                    <p className="text-sm text-green-700 font-medium">
+                      ✓ Voucher "{voucherInfo.voucher?.code}" applied!
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">
+                      Discount: {discountAmount.toLocaleString("id-ID", {
+                        currency: "IDR",
+                        style: "currency",
+                      })} ({voucherInfo.voucher?.discount_type === "percentage"
+                        ? `${voucherInfo.voucher?.discount_value}%`
+                        : "fixed"})
+                    </p>
+                    {voucherInfo.remaining_usage !== null && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Remaining uses: {voucherInfo.remaining_usage}
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVoucherInfo(null);
+                        setFormData({ ...formData, voucher_code: "" });
+                      }}
+                      className="text-xs text-red-600 underline mt-1"
+                    >
+                      Remove voucher
+                    </button>
+                  </div>
                 )}
               </div>
 
               <div className="flex gap-4">
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
                     setFormData({
                       full_name: "",
                       email: "",
@@ -658,8 +767,10 @@ export default function CheckoutFormPage() {
                       postal_code: "",
                       country: "Indonesia",
                       voucher_code: "",
-                    })
-                  }
+                    });
+                    setVoucherInfo(null);
+                    setVoucherError(null);
+                  }}
                   className="flex-1 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
                   Reset

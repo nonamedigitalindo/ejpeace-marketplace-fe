@@ -44,6 +44,8 @@ export default function PaymentPage() {
     buyNowItem,
     selectedCartItems,
     purchaseId, // Get purchaseId from CheckoutFormPage
+    voucherInfo, // Get voucherInfo from CheckoutFormPage
+    discount: passedDiscount = 0, // Get discount passed from checkout
   } = location.state;
 
   // Ensure we have items to process - either from cart, selectedCartItems or buyNowItem
@@ -83,8 +85,18 @@ export default function PaymentPage() {
     0
   );
 
-  // Calculate discount amount based on selected voucher
+  // Calculate discount amount based on selected voucher OR passed voucherInfo
   const calculateDiscount = () => {
+    // If voucherInfo is passed from checkout, use it directly
+    if (voucherInfo?.discount_amount) {
+      return voucherInfo.discount_amount;
+    }
+
+    // If discount was passed from checkout, use it
+    if (passedDiscount > 0) {
+      return passedDiscount;
+    }
+
     if (!selectedVoucher || !originalTotal) return 0;
 
     const minOrderValue = parseFloat(selectedVoucher.min_order_value) || 0;
@@ -101,6 +113,9 @@ export default function PaymentPage() {
 
     return 0;
   };
+
+  // Get the effective voucher to display
+  const effectiveVoucher = voucherInfo?.voucher || selectedVoucher;
 
   // Calculate final total after discount
   const discountAmount = calculateDiscount();
@@ -388,7 +403,7 @@ export default function PaymentPage() {
       {/* Produk */}
       <ProductList
         items={items}
-        selectedVoucher={selectedVoucher}
+        selectedVoucher={effectiveVoucher}
         discountAmount={discountAmount}
         originalTotal={originalTotal}
         finalTotal={finalTotal}
@@ -396,13 +411,14 @@ export default function PaymentPage() {
 
       {/* Voucher Section */}
       <VoucherSection
-        selectedVoucher={selectedVoucher}
-        voucherCode={voucherCode}
+        selectedVoucher={effectiveVoucher}
+        voucherCode={voucherCode || voucherInfo?.voucher?.code || ""}
         voucherError={voucherError}
         voucherLoading={voucherLoading}
         onVoucherCodeChange={handleVoucherCodeChange}
         onApplyVoucher={handleApplyVoucher}
         onRemoveVoucher={handleRemoveVoucher}
+        readOnly={!!voucherInfo}
       />
 
       {/* Payment Button */}
