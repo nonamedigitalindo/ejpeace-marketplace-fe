@@ -457,11 +457,10 @@ export default function TicketPurchasePage() {
 
               {voucherError && (
                 <div
-                  className={`mb-4 p-4 rounded-lg flex items-start gap-3 ${
-                    voucherError.includes("successfully")
+                  className={`mb-4 p-4 rounded-lg flex items-start gap-3 ${voucherError.includes("successfully")
                       ? "bg-green-50 border border-green-200 text-green-800"
                       : "bg-red-50 border border-red-200 text-red-800"
-                  } shadow-sm`}
+                    } shadow-sm`}
                 >
                   {voucherError.includes("successfully") ? (
                     <svg
@@ -494,21 +493,6 @@ export default function TicketPurchasePage() {
                 </div>
               )}
 
-              {/* Voucher Code Input */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Enter Voucher Code
-                </label>
-                <input
-                  type="text"
-                  value={voucherCode}
-                  onChange={handleVoucherCodeChange}
-                  placeholder="CODE"
-                  className="w-full border border-gray-300 px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  disabled={voucherLoading}
-                />
-              </div>
-
               {/* Available Product Vouchers */}
               <div className="mb-6">
                 <h4 className="text-sm font-medium text-gray-700 mb-3">
@@ -519,11 +503,10 @@ export default function TicketPurchasePage() {
                     {vouchers.map((voucher) => (
                       <div
                         key={voucher.id}
-                        className={`border rounded-lg p-4 cursor-pointer transition-all ${
-                          selectedVoucher?.id === voucher.id
+                        className={`border rounded-lg p-4 cursor-pointer transition-all ${selectedVoucher?.id === voucher.id
                             ? "border-blue-400 bg-blue-50"
                             : "border-gray-200 hover:border-gray-300"
-                        }`}
+                          }`}
                         onClick={() => {
                           setSelectedVoucher(voucher);
                           setVoucherCode(voucher.code);
@@ -545,11 +528,11 @@ export default function TicketPurchasePage() {
                             <div className="font-semibold text-gray-900">
                               {voucher.discount_type === "percentage"
                                 ? `Rp ${parseFloat(
-                                    voucher.discount_value
-                                  ).toLocaleString()}`
+                                  voucher.discount_value
+                                ).toLocaleString()}`
                                 : `Rp ${parseFloat(
-                                    voucher.discount_value
-                                  ).toLocaleString()}`}
+                                  voucher.discount_value
+                                ).toLocaleString()}`}
                             </div>
                           </div>
                         </div>
@@ -575,8 +558,8 @@ export default function TicketPurchasePage() {
                         {selectedVoucher.discount_type === "percentage"
                           ? `${parseFloat(selectedVoucher.discount_value)}% OFF`
                           : `Rp ${parseFloat(
-                              selectedVoucher.discount_value
-                            ).toLocaleString()} OFF`}
+                            selectedVoucher.discount_value
+                          ).toLocaleString()} OFF`}
                       </div>
                     </div>
                     <div className="text-right">
