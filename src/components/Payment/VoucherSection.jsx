@@ -13,7 +13,7 @@ const VoucherSection = ({
   return (
     <div className="space-y-3">
       {/* Label Voucher Section */}
-      <div className="flex items-center mb-2">
+      {/* <div className="flex items-center mb-2">
         <svg
           className="w-5 h-5 text-blue-600 mr-2"
           fill="currentColor"
@@ -22,7 +22,7 @@ const VoucherSection = ({
           <path d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" />
         </svg>
         <span className="font-semibold text-gray-700">Voucher Code</span>
-      </div>
+      </div> */}
 
       {/* Jika voucher SUDAH dipilih */}
       {selectedVoucher ? (
@@ -69,7 +69,7 @@ const VoucherSection = ({
       ) : (
         /* Jika voucher BELUM dipilih → tampilkan input dan tombol apply */
         <div className="space-y-2">
-          <div className="flex gap-2 items-center ">
+          {/* <div className="flex gap-2 items-center ">
             <input
               type="text"
               placeholder="Enter voucher code..."
@@ -88,7 +88,7 @@ const VoucherSection = ({
             >
               {voucherLoading ? "Applying..." : "Apply"}
             </button>
-          </div>
+          </div> */}
           {voucherError && (
             <p className="text-sm text-red-600">{voucherError}</p>
           )}

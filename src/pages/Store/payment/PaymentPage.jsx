@@ -5,12 +5,13 @@ import {
   initiatePayment,
 } from "../../../api/purchase";
 import { createTicket, initiateTicketPayment } from "../../../api/ticket";
-import { getAllVouchers } from "../../../api/voucher";
+
 import { useNavigate } from "react-router-dom";
 import OrderSummary from "../../../components/Payment/OrderSummary";
 import ProductList from "../../../components/Payment/ProductList";
-import VoucherSection from "../../../components/Payment/VoucherSection";
+
 import useAppStore from "../../../stores/useAppStore";
+import VoucherSection from "../../../components/Payment/VoucherSection";
 
 export default function PaymentPage() {
   const location = useLocation();
