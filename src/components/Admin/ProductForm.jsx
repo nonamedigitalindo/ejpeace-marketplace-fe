@@ -453,19 +453,19 @@ export default function ProductForm({ initialData = {}, isEdit = false, onSubmit
                         <div className="space-y-3">
                             {formData.alerts.map((alert, idx) => (
                                 <div key={idx} className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                    <div className="w-32 flex-shrink-0">
+                                    <div className=" shrink-0">
                                         <AlertBadge {...alert} />
                                     </div>
-                                    <div className="flex-1">
-                                        <label className="text-xs text-gray-500 font-bold uppercase mb-1 block">Threshold Count</label>
+                                    <div className="w-full">
+                                        <label className="text-xs text-gray-500 font-bold uppercase  block">Threshold Count</label>
                                         <input
                                             type="number"
                                             value={alert.threshold_count}
                                             onChange={(e) => handleAlertThresholdChange(alert.id, e.target.value)}
-                                            className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-sm focus:border-yellow-400 outline-none"
+                                            className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:border-yellow-400 outline-none"
                                             placeholder="Shows when fake qty usage..."
                                         />
-                                        <p className="text-[10px] text-gray-400 mt-0.5">Alert shows if Fake Quantity &le; {alert.threshold_count}</p>
+                                        <p className="text-[10px] text-gray-400 mt-0">Alert shows if Fake Quantity &le; {alert.threshold_count}</p>
                                     </div>
                                     <button
                                         type="button"
