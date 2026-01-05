@@ -252,7 +252,8 @@ export default function CheckoutFormPage() {
       const response = await validateVoucherUsage(
         formData.voucher_code,
         productIds,
-        [] // No event IDs for product checkout
+        [], // No event IDs for product checkout
+        totalPrice // Send order_amount for min_order validation
       );
 
       console.log("✅ Voucher validation response:", response);
@@ -308,6 +309,7 @@ export default function CheckoutFormPage() {
         const directPurchaseData = {
           purchase_data: {
             product_id: buyNowItem.id,
+            quantity: buyNowItem.qty || buyNowItem.quantity || 1,
             total_amount: totalPrice,
             description: buyNowItem.name,
           },
