@@ -15,7 +15,8 @@ export default function AdminSidebar({ mobileOpen, setMobileOpen }) {
     if (
       pathname.includes("admin-products") ||
       pathname.includes("create-product") ||
-      pathname.includes("edit-product")
+      pathname.includes("edit-product") ||
+      pathname.includes("product-alerts")
     ) {
       setProductDropdown(true);
     }
@@ -73,7 +74,8 @@ export default function AdminSidebar({ mobileOpen, setMobileOpen }) {
               className={`w-full flex justify-between items-center py-3 px-4 rounded-xl transition-all duration-200 group
                 ${pathname.includes("admin-products") ||
                   pathname.includes("edit-product") ||
-                  pathname.includes("create-product")
+                  pathname.includes("create-product") ||
+                  pathname.includes("product-alerts")
                   ? "bg-gray-800 text-white"
                   : "hover:bg-gray-800/50 hover:text-white"
                 }
@@ -100,6 +102,12 @@ export default function AdminSidebar({ mobileOpen, setMobileOpen }) {
                 label="Create Product"
                 to="/ejpeace/internal/create-product"
                 active={pathname === "/ejpeace/internal/create-product"}
+                isSubItem
+              />
+              <SidebarLink
+                label="Product Alerts"
+                to="/ejpeace/internal/product-alerts"
+                active={pathname === "/ejpeace/internal/product-alerts"}
                 isSubItem
               />
             </div>

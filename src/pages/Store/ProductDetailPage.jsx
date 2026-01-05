@@ -5,6 +5,8 @@ import { getProductById } from "../../api/product";
 import resolveImageSrc from "../../utils/image";
 import useAppStore from "../../stores/useAppStore";
 import StockIndicator from "../../components/Product/StockIndicator";
+import AlertBadge from "../../components/Product/AlertBadge";
+import * as FaIcons from "react-icons/fa";
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -114,6 +116,19 @@ export default function ProductDetailPage() {
     : originalPrice;
 
   // ============================================================
+  // HELPERS: Display Quantity & Alerts
+  // ============================================================
+  const displayQty = (product?.fake_quantity !== null && product?.fake_quantity !== undefined)
+    ? product.fake_quantity
+    : (product?.quantity ?? 0);
+
+  const activeAlerts = (product?.alerts || [])
+    .filter(a => displayQty <= (a.threshold_count || 0))
+    .sort((a, b) => (a.threshold_count || 0) - (b.threshold_count || 0))
+    .slice(0, 1);
+
+
+  // ============================================================
   // ADD TO CART
   // ============================================================
   const handleAddToCart = async () => {
@@ -133,6 +148,7 @@ export default function ProductDetailPage() {
     const cartItem = {
       product_id: product.id,
       qty: quantity,
+      // Note: We don't send fake_quantity logic here, just ID and Qty.
     };
 
     try {
@@ -317,9 +333,20 @@ export default function ProductDetailPage() {
             ) : (
               <span className="text-2xl font-bold">{formattedDiscountedPrice}</span>
             )}
+            <div className="flex gap-3 items-center ">
 
-            {/* Stock Indicator */}
-            <StockIndicator quantity={product.quantity} />
+              {/* ALERT BANNERS (Redesigned) */}
+              {activeAlerts.length > 0 && (
+                <div className="flex flex-col gap-3 items-start">
+                  {activeAlerts.map((alert) => (
+                    <AlertBadge key={alert.id} {...alert} />
+                  ))}
+                </div>
+              )}
+
+              {/* Stock Indicator - Showing Display Qty (Fake) */}
+              <StockIndicator quantity={displayQty} className="w-fit" />
+            </div>
 
             {/* Quantity Selector */}
             <div className="gap-4">

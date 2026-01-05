@@ -48,6 +48,7 @@ import Dashboard from "../pages/Admin/Dashboard";
 import UserPage from "../pages/Admin/CreateUserPage";
 import AdminEventPage from "../pages/Admin/CreateEventPage";
 import CreateVoucher from "../pages/Admin/CreateVoucher";
+import ProductAlertsPage from "../pages/Admin/ProductAlertsPage";
 
 const route = createBrowserRouter([
   // Redirect awal ke home
@@ -232,6 +233,7 @@ const route = createBrowserRouter([
       { path: "admin-products", element: <AdminProducts /> },
       { path: "create-product", element: <CreateProduct /> },
       { path: "edit-product/:id", element: <EditProduct /> },
+      { path: "product-alerts", element: <ProductAlertsPage /> },
       { path: "admin-order", element: <AdminOrder /> },
       { path: "dashboard", element: <Dashboard /> },
       { path: "users", element: <UserPage /> },

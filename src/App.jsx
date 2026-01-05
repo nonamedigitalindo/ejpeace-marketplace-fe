@@ -26,6 +26,7 @@ import CreateProduct from "./pages/Admin/CreateProductPage";
 import EditProduct from "./pages/Admin/EditProductPage";
 import AdminOrder from "./pages/Admin/AdminOrderPage";
 import Dashboard from "./pages/Admin/Dashboard";
+import ProductAlertsPage from "./pages/Admin/ProductAlertsPage";
 
 export default function App() {
   const { loadCartFromDatabase } = useAppStore();
@@ -171,6 +172,7 @@ export default function App() {
                 <Route path="/admin-products" element={<AdminProducts />} />
                 <Route path="/create-product" element={<CreateProduct />} />
                 <Route path="/edit-product/:id" element={<EditProduct />} />
+                <Route path="/product-alerts" element={<ProductAlertsPage />} />
                 <Route path="/admin-order" element={<AdminOrder />} />
               </Routes>
             </AdminLayout>

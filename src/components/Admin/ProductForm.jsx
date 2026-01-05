@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import CreatableSelect from "react-select/creatable";
 import Select from "react-select";
-import { FaCloudUploadAlt, FaSave, FaTimes, FaEdit, FaArrowLeft, FaExchangeAlt, FaTrash } from "react-icons/fa";
+import { FaCloudUploadAlt, FaSave, FaTimes, FaEdit, FaArrowLeft, FaExchangeAlt, FaTrash, FaPlus } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import resolveImageSrc from "../../utils/image";
+import { getProductAlerts } from "../../api/productAlert";
+import AlertBadge from "../Product/AlertBadge";
 
 // Predefined Options
 const SIZE_OPTIONS = [
@@ -47,6 +49,7 @@ export default function ProductForm({ initialData = {}, isEdit = false, onSubmit
     const fileInputRef = useRef(null);
     const editFileInputRef = useRef(null);
     const [editingImageIndex, setEditingImageIndex] = useState(null);
+    const [availableAlerts, setAvailableAlerts] = useState([]);
 
     // Form State
     const [formData, setFormData] = useState({
@@ -57,10 +60,25 @@ export default function ProductForm({ initialData = {}, isEdit = false, onSubmit
         category: null,
         size: [],
         quantity: 0,
-        active: 1
+        fake_quantity: "",
+        active: 1,
+        alerts: []
     });
 
     const [images, setImages] = useState([]);
+
+    // Fetch alerts on mount
+    useEffect(() => {
+        const fetchAlerts = async () => {
+            try {
+                const alerts = await getProductAlerts();
+                setAvailableAlerts(alerts.map(a => ({ value: a, label: a.text })));
+            } catch (error) {
+                console.error("Failed to fetch alerts:", error);
+            }
+        };
+        fetchAlerts();
+    }, []);
 
     // Initialize Data
     useEffect(() => {
@@ -76,7 +94,15 @@ export default function ProductForm({ initialData = {}, isEdit = false, onSubmit
                     ? (typeof initialData.size === 'string' ? initialData.size.split(',').map(s => SIZE_OPTIONS.find(opt => opt.value === s.trim()) || { value: s.trim(), label: s.trim() }) : [])
                     : [],
                 quantity: initialData.quantity || 0,
-                active: initialData.active ?? 1
+                fake_quantity: initialData.fake_quantity ?? "",
+                active: initialData.active ?? 1,
+                alerts: initialData.alerts ? initialData.alerts.map(a => ({
+                    id: a.id,
+                    text: a.text,
+                    icon: a.icon,
+                    color: a.color,
+                    threshold_count: a.threshold_count ?? 0
+                })) : []
             });
 
             if (initialData.images && Array.isArray(initialData.images)) {
@@ -91,6 +117,33 @@ export default function ProductForm({ initialData = {}, isEdit = false, onSubmit
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    // Alert Handlers
+    const handleAddAlert = (option) => {
+        if (!option) return;
+        const alertToAdd = option.value;
+        // Check duplication
+        if (formData.alerts.some(a => a.id === alertToAdd.id)) return;
+
+        setFormData(prev => ({
+            ...prev,
+            alerts: [...prev.alerts, { ...alertToAdd, threshold_count: 0 }]
+        }));
+    };
+
+    const handleRemoveAlert = (alertId) => {
+        setFormData(prev => ({
+            ...prev,
+            alerts: prev.alerts.filter(a => a.id !== alertId)
+        }));
+    };
+
+    const handleAlertThresholdChange = (alertId, val) => {
+        setFormData(prev => ({
+            ...prev,
+            alerts: prev.alerts.map(a => a.id === alertId ? { ...a, threshold_count: parseInt(val) || 0 } : a)
+        }));
     };
 
     // Format number as Rupiah string (1000000 -> "1.000.000")
@@ -250,6 +303,21 @@ export default function ProductForm({ initialData = {}, isEdit = false, onSubmit
             fd.append("discount_percentage", formData.discount_percentage || "0");
             fd.append("quantity", formData.quantity || "0");
 
+            // Append fake_quantity if defined
+            if (formData.fake_quantity !== "" && formData.fake_quantity !== null) {
+                fd.append("fake_quantity", formData.fake_quantity);
+            }
+
+            // Append alerts as JSON string
+            if (formData.alerts && formData.alerts.length > 0) {
+                fd.append("alerts", JSON.stringify(formData.alerts.map(a => ({
+                    id: a.id,
+                    threshold_count: a.threshold_count
+                }))));
+            } else {
+                fd.append("alerts", JSON.stringify([])); // Clear alerts if empty
+            }
+
             if (formData.category) fd.append("category", formData.category.value);
             if (formData.size && formData.size.length > 0) {
                 fd.append("size", formData.size.map(s => s.value).join(","));
@@ -273,8 +341,7 @@ export default function ProductForm({ initialData = {}, isEdit = false, onSubmit
         }
     };
 
-    // Drag events omitted for brevity unless requested (can interfere) - but let's keep basic drag
-    // Keeping drag logic simple
+    // Drag events
     const [draggedItemIndex, setDraggedItemIndex] = useState(null);
     const onDragStart = (e, index) => { setDraggedItemIndex(index); };
     const onDragOver = (e, index) => {
@@ -337,7 +404,7 @@ export default function ProductForm({ initialData = {}, isEdit = false, onSubmit
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Category (Type to add)</label>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Category</label>
                                     <CreatableSelect
                                         options={CATEGORY_OPTIONS}
                                         value={formData.category}
@@ -361,6 +428,57 @@ export default function ProductForm({ initialData = {}, isEdit = false, onSubmit
                                     />
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Alerts Section */}
+                    <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
+                        <h2 className="text-xl font-bold text-gray-900 mb-6 border-b pb-2 border-gray-100">Product Alerts</h2>
+                        <div className="mb-4">
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Add Alert</label>
+                            <Select
+                                options={availableAlerts}
+                                onChange={handleAddAlert}
+                                styles={customSelectStyles}
+                                placeholder="Select an alert to add..."
+                                formatOptionLabel={(option) => (
+                                    <div className="flex items-center gap-2">
+                                        <AlertBadge {...option.value} />
+                                    </div>
+                                )}
+                                value={null}
+                            />
+                        </div>
+
+                        <div className="space-y-3">
+                            {formData.alerts.map((alert, idx) => (
+                                <div key={idx} className="flex items-center gap-4 bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                    <div className="w-32 flex-shrink-0">
+                                        <AlertBadge {...alert} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <label className="text-xs text-gray-500 font-bold uppercase mb-1 block">Threshold Count</label>
+                                        <input
+                                            type="number"
+                                            value={alert.threshold_count}
+                                            onChange={(e) => handleAlertThresholdChange(alert.id, e.target.value)}
+                                            className="w-full px-3 py-1.5 rounded-lg border border-gray-300 text-sm focus:border-yellow-400 outline-none"
+                                            placeholder="Shows when fake qty usage..."
+                                        />
+                                        <p className="text-[10px] text-gray-400 mt-0.5">Alert shows if Fake Quantity &le; {alert.threshold_count}</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleRemoveAlert(alert.id)}
+                                        className="text-red-500 hover:text-red-700 p-2"
+                                    >
+                                        <FaTrash />
+                                    </button>
+                                </div>
+                            ))}
+                            {formData.alerts.length === 0 && (
+                                <p className="text-gray-400 text-sm py-4 text-center italic">No alerts assigned.</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -400,7 +518,7 @@ export default function ProductForm({ initialData = {}, isEdit = false, onSubmit
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-bold text-gray-700 mb-2">Stock</label>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Real Stock</label>
                                     <input
                                         name="quantity"
                                         type="number"
@@ -409,6 +527,22 @@ export default function ProductForm({ initialData = {}, isEdit = false, onSubmit
                                         className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 outline-none"
                                     />
                                 </div>
+                            </div>
+
+                            {/* Fake Quantity Field */}
+                            <div className="pt-4 border-t border-gray-100 mt-4">
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Display Stock</label>
+                                <input
+                                    name="fake_quantity"
+                                    type="number"
+                                    value={formData.fake_quantity}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:ring-4 focus:ring-yellow-100 outline-none"
+                                    placeholder="Leave empty to use Real Stock"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Shown to customers. Decreases on sale. Resets to this value if it hits 0.
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -458,7 +592,6 @@ export default function ProductForm({ initialData = {}, isEdit = false, onSubmit
         </div>
     );
 }
-
 
 function Input({ label, type = "text", ...props }) {
     return (
