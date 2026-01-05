@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaPlus, FaEdit, FaTrash, FaSpinner } from "react-icons/fa";
+import { FaPlus, FaEdit, FaTrash, FaSpinner, FaTimes } from "react-icons/fa";
 import {
     getProductAlerts,
     createProductAlert,
@@ -8,6 +8,7 @@ import {
 } from "../../api/productAlert";
 import IconPicker from "../../components/Admin/IconPicker";
 import AlertBadge from "../../components/Product/AlertBadge";
+import ColorPickerInput from "../../components/Admin/ColorPickerInput";
 import Swal from "sweetalert2";
 
 export default function ProductAlertsPage() {
@@ -94,137 +95,143 @@ export default function ProductAlertsPage() {
     };
 
     return (
-        <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold">Product Alerts Management</h1>
+        <div className="w-full min-h-screen font-sans pb-10 p-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900">Product Alerts Management</h1>
+                    <p className="text-gray-500 mt-1">Manage custom product badges and alerts.</p>
+                </div>
                 <button
                     onClick={() => { resetForm(); setIsModalOpen(true); }}
-                    className="bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2 hover:bg-blue-700"
+                    className="bg-linear-to-r from-yellow-400 to-amber-500 text-black px-6 py-3 rounded-xl font-bold hover:shadow-lg hover:scale-105 transition-all flex items-center gap-2"
                 >
                     <FaPlus /> Add New Alert
                 </button>
             </div>
 
             {loading ? (
-                <div className="flex justify-center p-12">
-                    <FaSpinner className="animate-spin text-4xl text-blue-500" />
+                <div className="flex justify-center py-20">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-500"></div>
                 </div>
             ) : (
-                <div className="bg-white rounded-lg shadow overflow-hidden">
-                    <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preview</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Text</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Icon</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {alerts.map((alert) => (
-                                <tr key={alert.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        <AlertBadge {...alert} />
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{alert.text}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{alert.icon}</td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-4 h-4 rounded-full" style={{ backgroundColor: alert.color }}></div>
-                                            {alert.color}
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button onClick={() => openEdit(alert)} className="text-indigo-600 hover:text-indigo-900 mr-4">
-                                            <FaEdit />
-                                        </button>
-                                        <button onClick={() => verifyDelete(alert.id)} className="text-red-600 hover:text-red-900">
-                                            <FaTrash />
-                                        </button>
-                                    </td>
+                <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="bg-yellow-50 text-gray-600 border-b border-gray-100">
+                                    <th className="p-5 font-bold uppercase text-xs tracking-wider rounded-tl-3xl">Preview</th>
+                                    <th className="p-5 font-bold uppercase text-xs tracking-wider">Text</th>
+                                    <th className="p-5 font-bold uppercase text-xs tracking-wider">Icon</th>
+                                    <th className="p-5 font-bold uppercase text-xs tracking-wider">Color</th>
+                                    <th className="p-5 font-bold uppercase text-xs tracking-wider text-right rounded-tr-3xl">Actions</th>
                                 </tr>
-                            ))}
-                            {alerts.length === 0 && (
-                                <tr>
-                                    <td colSpan="5" className="px-6 py-12 text-center text-gray-500">No alerts found. Create one!</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody className="divide-y divide-gray-50">
+                                {alerts.map((alert) => (
+                                    <tr key={alert.id} className="hover:bg-yellow-50/30 transition-colors group">
+                                        <td className="p-5">
+                                            <AlertBadge {...alert} />
+                                        </td>
+                                        <td className="p-5">
+                                            <p className="font-bold text-gray-900">{alert.text}</p>
+                                        </td>
+                                        <td className="p-5 text-gray-500 font-mono text-xs">{alert.icon}</td>
+                                        <td className="p-5">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-6 h-6 rounded-full border border-gray-200 shadow-sm" style={{ backgroundColor: alert.color }}></div>
+                                                <span className="text-xs text-gray-500 uppercase">{alert.color}</span>
+                                            </div>
+                                        </td>
+                                        <td className="p-5 text-right">
+                                            <div className="flex justify-end gap-2 opacity-100">
+                                                <button onClick={() => openEdit(alert)} className="p-2 rounded-lg bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors">
+                                                    <FaEdit />
+                                                </button>
+                                                <button onClick={() => verifyDelete(alert.id)} className="p-2 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 transition-colors">
+                                                    <FaTrash />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                                {alerts.length === 0 && (
+                                    <tr>
+                                        <td colSpan="5" className="px-6 py-12 text-center text-gray-500">No alerts found. Create one!</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 
             {/* Modal */}
             {isModalOpen && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                    <div className="bg-white rounded-lg p-6 w-full max-w-md">
-                        <h2 className="text-xl font-bold mb-4">{editingAlert ? "Edit Alert" : "Create New Alert"}</h2>
-                        <form onSubmit={handleSubmit}>
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Alert Text</label>
-                                <input
-                                    type="text"
-                                    required
-                                    className="w-full border rounded px-3 py-2"
-                                    value={formData.text}
-                                    onChange={(e) => setFormData({ ...formData, text: e.target.value })}
-                                    placeholder="e.g. Hot Sale!"
-                                />
-                            </div>
+                <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md flex flex-col animate-slide-up">
+                        <div className="bg-linear-to-r from-yellow-400 to-amber-500 p-6 flex justify-between items-center shrink-0 rounded-t-3xl">
+                            <h2 className="text-xl font-bold text-black">
+                                {editingAlert ? "Edit Alert" : "Create New Alert"}
+                            </h2>
+                            <button onClick={() => setIsModalOpen(false)} className="bg-white/20 hover:bg-white/40 rounded-full w-8 h-8 flex items-center justify-center text-black font-bold transition-colors">
+                                <FaTimes />
+                            </button>
+                        </div>
 
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Icon</label>
-                                <IconPicker
-                                    value={formData.icon}
-                                    onChange={(icon) => setFormData({ ...formData, icon })}
-                                    color={formData.color}
-                                />
-                            </div>
-
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
-                                <div className="flex items-center justify-center gap-3  rounded-lg p-2">
-                                    <input
-                                        type="color"
-                                        required
-                                        style={{ margin: 0, marginTop: '-1rem', padding: 0, width: '2.5rem', height: '2.5rem', border: 'none', borderRadius: '10%' }}
-                                        className=" p-0 cursor-pointer"
-                                        value={formData.color}
-
-                                        onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                                    />
+                        <div className="p-8 space-y-6">
+                            <form onSubmit={handleSubmit} className="space-y-5">
+                                <div>
+                                    <label className="font-bold text-gray-700 mb-2 text-sm block">Alert Text</label>
                                     <input
                                         type="text"
-                                        className="w-full outline-none text-gray-700  font-medium uppercase"
-                                        value={formData.color}
-                                        onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                                        placeholder="#000000"
+                                        required
+                                        className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:bg-white focus:border-yellow-400 focus:ring-4 focus:ring-yellow-100 transition-all outline-none"
+                                        value={formData.text}
+                                        onChange={(e) => setFormData({ ...formData, text: e.target.value })}
+                                        placeholder="e.g. Hot Sale!"
                                     />
                                 </div>
-                            </div>
 
-                            <div className="mb-6 p-4 bg-gray-50 rounded border">
-                                <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Preview</label>
-                                <AlertBadge icon={formData.icon} color={formData.color} text={formData.text || "Preview Check"} />
-                            </div>
+                                <div>
+                                    <label className="font-bold text-gray-700 mb-2 text-sm block">Icon</label>
+                                    <IconPicker
+                                        value={formData.icon}
+                                        onChange={(icon) => setFormData({ ...formData, icon })}
+                                        color={formData.color}
+                                    />
+                                </div>
 
-                            <div className="flex justify-end gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                                >
-                                    Save
-                                </button>
-                            </div>
-                        </form>
+                                <ColorPickerInput
+                                    colors={alerts.map((alert) => alert.color)}
+                                    label="Color"
+                                    color={formData.color}
+                                    onChange={(color) => setFormData({ ...formData, color })}
+                                />
+
+                                <div className="p-4 bg-gray-50 rounded-xl border border-gray-100 text-center">
+                                    <label className="block text-xs font-bold text-gray-400 uppercase mb-3">Live Preview</label>
+                                    <div className="flex justify-center">
+                                        <AlertBadge icon={formData.icon} color={formData.color} text={formData.text || "Preview Badge"} />
+                                    </div>
+                                </div>
+
+                                <div className="pt-2 flex justify-end gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsModalOpen(false)}
+                                        className="px-6 py-3 rounded-xl font-bold text-gray-500 hover:bg-gray-100 transition-all"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        className="bg-linear-to-r from-yellow-400 to-amber-500 text-black px-8 py-3 rounded-xl font-bold hover:shadow-lg hover:scale-105 transition-all"
+                                    >
+                                        Save Alert
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
             )}
