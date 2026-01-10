@@ -201,9 +201,7 @@ export default function StorePage() {
                       )}
 
                       <div className="flex justify-between items-center mt-2">
-                        <p className="text-xs text-gray-600">
-                          STOCK {displayQty}
-                        </p>
+
                         <Link
                           to={`product/${p.id}`}
                           className="px-4 py-1 border rounded-full text-xs hover:bg-black hover:text-white transition"

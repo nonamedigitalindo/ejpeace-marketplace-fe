@@ -345,7 +345,7 @@ export default function ProductDetailPage() {
               )}
 
               {/* Stock Indicator - Showing Display Qty (Fake) */}
-              <StockIndicator quantity={displayQty} className="w-fit" />
+              {/* <StockIndicator quantity={displayQty} className="w-fit" /> */}
             </div>
 
             {/* Quantity Selector */}
